@@ -1,0 +1,192 @@
+/* Base styles (applied to both screen and print) */
+.print-view {
+  background: white;
+  color: black;
+  font-family: "Times New Roman", serif;
+  line-height: 1.5;
+  padding: 2cm;
+  max-width: 210mm; /* A4 width */
+  margin: 0 auto;
+}
+
+/* Header styles */
+.header {
+  text-align: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #000;
+}
+
+.institute-name {
+  font-size: 16pt;
+  font-weight: bold;
+  margin: 0 0 0.5rem 0;
+}
+
+.test-title {
+  font-size: 14pt;
+  font-weight: bold;
+  margin: 0 0 0.5rem 0;
+}
+
+.test-meta {
+  font-size: 12pt;
+}
+
+.batch, .date {
+  margin: 0 0.5rem;
+}
+
+/* Main content styles */
+.main-content {
+  margin-bottom: 2rem;
+}
+
+.section {
+  margin-bottom: 2rem;
+  break-inside: avoid;
+}
+
+.section-header {
+  margin-bottom: 1rem;
+}
+
+.section-header h3 {
+  font-size: 14pt;
+  font-weight: bold;
+  margin: 0 0 0.5rem 0;
+}
+
+/* Question styles */
+.question {
+  margin-bottom: 1.5rem;
+  break-inside: avoid;
+}
+
+.question-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.question-number {
+  font-weight: bold;
+  min-width: 1.5rem;
+}
+
+.marks {
+  font-size: 10pt;
+  color: #666;
+}
+
+.question-content {
+  margin-left: 1.5rem;
+}
+
+.question-text {
+  margin-bottom: 1rem;
+}
+
+.question-image {
+  max-width: 100%;
+  height: auto;
+  margin: 0.5rem 0;
+}
+
+/* Options styles */
+.options {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.option {
+  display: flex;
+  gap: 0.5rem;
+  break-inside: avoid;
+}
+
+.option-label {
+  font-weight: bold;
+  min-width: 1.5rem;
+}
+
+.option-content {
+  flex: 1;
+}
+
+.option-image {
+  max-width: 100%;
+  height: auto;
+  margin-top: 0.5rem;
+}
+
+/* Footer styles */
+.footer {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid #000;
+}
+
+.footer-content {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10pt;
+}
+
+/* Print-specific styles */
+@media print {
+  @page {
+    size: A4;
+    margin: 1.5cm 1cm;
+  }
+
+  .print-view {
+    padding: 0;
+    max-width: none;
+  }
+
+  /* Ensure proper page breaks */
+  .section {
+    page-break-before: auto;
+    page-break-after: auto;
+  }
+
+  .question {
+    page-break-inside: avoid;
+  }
+
+  /* Ensure images print properly */
+  img {
+    max-width: 100% !important;
+    page-break-inside: avoid;
+  }
+
+  /* Ensure proper font rendering */
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Hide any screen-only elements */
+  .screen-only {
+    display: none !important;
+  }
+
+  /* Ensure math renders properly */
+  .katex {
+    font-size: inherit !important;
+  }
+
+  /* Footer positioning */
+  .footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 1rem;
+    background: white;
+  }
+}

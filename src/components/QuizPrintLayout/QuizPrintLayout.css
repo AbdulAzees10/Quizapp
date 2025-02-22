@@ -1,0 +1,181 @@
+/* Print Layout Styles */
+@media print {
+  @page {
+    size: A4;
+    margin: 1.5cm 1cm;
+  }
+
+  .quiz-print-layout {
+    font-family: "Times New Roman", serif;
+    color: #000;
+    line-height: 1.4;
+  }
+
+  /* Header Styles */
+  .print-header {
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+
+  .institute-details {
+    margin-bottom: 1rem;
+  }
+
+  .institute-logo {
+    height: 3rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .institute-name {
+    font-size: 14pt;
+    font-weight: bold;
+    margin: 0;
+  }
+
+  .test-title {
+    font-size: 12pt;
+    font-weight: bold;
+    margin: 0.5rem 0;
+  }
+
+  .test-meta {
+    font-size: 11pt;
+    margin-bottom: 1rem;
+  }
+
+  .batch, .date {
+    margin: 0 0.5rem;
+  }
+
+  /* Questions Container */
+  .questions-container {
+    column-count: 2;
+    column-gap: 2rem;
+    margin-bottom: 2rem;
+  }
+
+  /* Section Styles */
+  .section {
+    break-inside: avoid-column;
+    margin-bottom: 1.5rem;
+  }
+
+  .section-header {
+    break-inside: avoid;
+    margin-bottom: 1rem;
+  }
+
+  .section-title {
+    font-size: 12pt;
+    font-weight: bold;
+    margin: 0;
+  }
+
+  .section-time {
+    font-size: 11pt;
+    font-style: italic;
+  }
+
+  /* Question Styles */
+  .question-item {
+    break-inside: avoid;
+    margin-bottom: 1rem;
+    page-break-inside: avoid;
+  }
+
+  .question-header {
+    display: flex;
+    align-items: baseline;
+    margin-bottom: 0.5rem;
+  }
+
+  .question-number {
+    font-size: 11pt;
+    font-weight: bold;
+    margin-right: 0.5rem;
+  }
+
+  .question-marks {
+    font-size: 10pt;
+    font-style: italic;
+  }
+
+  .question-text {
+    font-size: 11pt;
+    margin-bottom: 0.5rem;
+  }
+
+  .question-image {
+    max-width: 100%;
+    margin: 0.5rem 0;
+  }
+
+  /* Options Grid */
+  .options-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .option {
+    display: flex;
+    align-items: flex-start;
+  }
+
+  .option-label {
+    font-size: 11pt;
+    font-weight: bold;
+    margin-right: 0.5rem;
+    min-width: 1.5rem;
+  }
+
+  .option-content {
+    font-size: 11pt;
+  }
+
+  .option-image {
+    max-width: 100%;
+    margin-top: 0.25rem;
+  }
+
+  /* Footer Styles */
+  .print-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    text-align: center;
+    padding: 0.5rem;
+    font-size: 10pt;
+  }
+
+  .footer-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .page-number {
+    font-size: 10pt;
+  }
+
+  .tagline {
+    font-size: 10pt;
+    font-style: italic;
+  }
+
+  /* Hide screen-only elements */
+  .screen-only {
+    display: none !important;
+  }
+}
+
+/* Non-print styles (for preview) */
+.quiz-print-layout {
+  max-width: 210mm; /* A4 width */
+  margin: 0 auto;
+  background: white;
+  padding: 1.5cm 1cm;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}

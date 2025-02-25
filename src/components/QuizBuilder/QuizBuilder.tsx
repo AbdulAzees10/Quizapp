@@ -47,15 +47,23 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
   const [quiz, setQuiz] = useState<Quiz>(() => initialQuiz || {
     id: crypto.randomUUID(),
     title: '',
+    header: [],
     instructions: [],
+    footer: [],
     sections: [],
     totalDuration: 0,
     totalMarks: 0,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+    watermark: {
+      enabled: true,
+      text: "PROF. P.C. THOMAS CLASSES & CHAITHANYA CLASSES"
+    }
   });
 
+  const [newHeader, setNewHeader] = useState('');
   const [newInstruction, setNewInstruction] = useState('');
+  const [newFooter, setNewFooter] = useState('');
   const [showGeneratorWizard, setShowGeneratorWizard] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -80,6 +88,23 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
     questionCount: section.questions.length
   }))]);
 
+  const handleAddHeader = () => {
+    if (newHeader.trim()) {
+      setQuiz(prev => ({
+        ...prev,
+        header: [...(prev.header || []), newHeader.trim()],
+      }));
+      setNewHeader('');
+    }
+  };
+
+  const handleRemoveHeader = (index: number) => {
+    setQuiz(prev => ({
+      ...prev,
+      header: prev.header?.filter((_, i) => i !== index) || [],
+    }));
+  };
+
   const handleAddInstruction = () => {
     if (newInstruction.trim()) {
       setQuiz(prev => ({
@@ -94,6 +119,23 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
     setQuiz(prev => ({
       ...prev,
       instructions: prev.instructions?.filter((_, i) => i !== index) || [],
+    }));
+  };
+
+  const handleAddFooter = () => {
+    if (newFooter.trim()) {
+      setQuiz(prev => ({
+        ...prev,
+        footer: [...(prev.footer || []), newFooter.trim()],
+      }));
+      setNewFooter('');
+    }
+  };
+
+  const handleRemoveFooter = (index: number) => {
+    setQuiz(prev => ({
+      ...prev,
+      footer: prev.footer?.filter((_, i) => i !== index) || [],
     }));
   };
 
@@ -169,6 +211,47 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
           />
         </div>
 
+        {/* Header */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Header Notes (Optional)
+          </label>
+          <div className="space-y-2">
+            {quiz.header?.map((headerItem, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <span className="text-sm">{index + 1}.</span>
+                <span className="flex-1">{headerItem}</span>
+                <button
+                  onClick={() => handleRemoveHeader(index)}
+                  className="text-red-600 hover:text-red-800"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newHeader}
+                onChange={(e) => setNewHeader(e.target.value)}
+                placeholder="Add a header note..."
+                className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleAddHeader();
+                  }
+                }}
+              />
+              <button
+                onClick={handleAddHeader}
+                className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Duration */}
         <div>
           <label htmlFor="duration" className="block text-sm font-medium text-gray-700">
@@ -225,6 +308,89 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
                 Add
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Footer Notes (Optional)
+          </label>
+          <div className="space-y-2">
+            {quiz.footer?.map((footerItem, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <span className="text-sm">{index + 1}.</span>
+                <span className="flex-1">{footerItem}</span>
+                <button
+                  onClick={() => handleRemoveFooter(index)}
+                  className="text-red-600 hover:text-red-800"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newFooter}
+                onChange={(e) => setNewFooter(e.target.value)}
+                placeholder="Add a footer note..."
+                className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleAddFooter();
+                  }
+                }}
+              />
+              <button
+                onClick={handleAddFooter}
+                className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Watermark Settings */}
+        <div className="space-y-4">
+          <label className="block text-sm font-medium text-gray-700">Watermark Settings</label>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="watermarkEnabled"
+                checked={quiz.watermark?.enabled}
+                onChange={(e) => setQuiz(prev => ({
+                  ...prev,
+                  watermark: {
+                    ...prev.watermark,
+                    enabled: e.target.checked
+                  }
+                }))}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <label htmlFor="watermarkEnabled" className="ml-2 text-sm text-gray-700">
+                Enable Watermark
+              </label>
+            </div>
+            {quiz.watermark?.enabled && (
+              <div className="flex-1">
+                <input
+                  type="text"
+                  value={quiz.watermark?.text || ''}
+                  onChange={(e) => setQuiz(prev => ({
+                    ...prev,
+                    watermark: {
+                      ...prev.watermark,
+                      text: e.target.value
+                    }
+                  }))}
+                  placeholder="Enter watermark text..."
+                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                />
+              </div>
+            )}
           </div>
         </div>
 

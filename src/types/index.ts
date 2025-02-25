@@ -78,6 +78,10 @@ export interface Quiz {
   totalMarks: number;
   createdAt: string;
   updatedAt: string;
+  watermark?: {
+    enabled: boolean;
+    text?: string;
+  };
 }
 
 export interface QuizGeneratorSettings {

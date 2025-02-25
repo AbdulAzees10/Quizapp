@@ -57,18 +57,18 @@ export const QuizGeneratorWizard: React.FC<QuizGeneratorWizardProps> = ({
   const getAvailableTopics = (chapter: string): string[] => 
     tagSystem.topics[chapter] || [];
 
-  // Update getFilteredQuestions to handle tags correctly
-  const getFilteredQuestions = (section: SectionSetup): Question[] => {
+  // Update getFilteredQuestions to track used questions within topics
+  const getFilteredQuestions = (section: SectionSetup, chapter?: string, excludeIds: Set<string> = new Set()): Question[] => {
     if (!section.subject || !examType) return [];
 
     return questions.filter(q => {
-      if (usedQuestions.has(q.id)) return false;
+      if (usedQuestions.has(q.id) || excludeIds.has(q.id)) return false;
 
       const matchesExamType = q.tags.exam_type === examType;
       const matchesSubject = q.tags.subject === section.subject;
-      const matchesChapter = section.chapterDistribution.some(cd => 
-        cd.chapter === q.tags.chapter
-      );
+      const matchesChapter = chapter 
+        ? q.tags.chapter === chapter
+        : section.chapterDistribution.some(cd => cd.chapter === q.tags.chapter);
 
       return matchesExamType && matchesSubject && matchesChapter;
     });
@@ -171,6 +171,11 @@ export const QuizGeneratorWizard: React.FC<QuizGeneratorWizardProps> = ({
     setSections(prev => {
       const newSections = [...prev];
       const section = newSections[sectionIndex];
+      const availableQuestions = getFilteredQuestions(section, chapter);
+      
+      // Limit count to available questions
+      const validCount = Math.min(count, availableQuestions.length);
+      
       const chapterIndex = section.chapterDistribution.findIndex(
         d => d.chapter === chapter
       );
@@ -178,13 +183,13 @@ export const QuizGeneratorWizard: React.FC<QuizGeneratorWizardProps> = ({
       if (chapterIndex >= 0) {
         section.chapterDistribution[chapterIndex] = {
           chapter,
-          count,
+          count: validCount,
           topics: topics || section.chapterDistribution[chapterIndex].topics,
         };
       } else {
         section.chapterDistribution.push({
           chapter,
-          count,
+          count: validCount,
           topics: topics || [],
         });
       }
@@ -210,11 +215,20 @@ export const QuizGeneratorWizard: React.FC<QuizGeneratorWizardProps> = ({
       );
 
       if (chapterDist) {
+        // Calculate total topics count excluding current topic
+        const otherTopicsCount = chapterDist.topics
+          .filter(t => t.topic !== topic)
+          .reduce((sum, t) => sum + t.count, 0);
+
+        // Ensure new total doesn't exceed chapter count
+        const maxAllowedCount = chapterDist.count - otherTopicsCount;
+        const validCount = Math.min(count, maxAllowedCount);
+
         const topicIndex = chapterDist.topics.findIndex(t => t.topic === topic);
         if (topicIndex >= 0) {
-          chapterDist.topics[topicIndex] = { topic, count };
+          chapterDist.topics[topicIndex] = { topic, count: validCount };
         } else {
-          chapterDist.topics.push({ topic, count });
+          chapterDist.topics.push({ topic, count: validCount });
         }
       }
 
@@ -270,7 +284,51 @@ export const QuizGeneratorWizard: React.FC<QuizGeneratorWizardProps> = ({
     };
   };
 
-  // Update the validateSectionsStep function to include difficulty distribution validation
+  // Update validateTopicDistribution to check chapter question availability
+  const validateTopicDistribution = (
+    chapterDist: ChapterDistribution,
+    availableQuestions: Question[]
+  ): string[] => {
+    const errors: string[] = [];
+
+    // Check if chapter has enough questions
+    if (availableQuestions.length < chapterDist.count) {
+      errors.push(
+        `Not enough questions available (need ${chapterDist.count}, have ${availableQuestions.length})`
+      );
+      return errors; // Return early since we can't validate topics without enough chapter questions
+    }
+
+    const topicsTotal = chapterDist.topics.reduce((sum, t) => sum + t.count, 0);
+
+    if (topicsTotal > chapterDist.count) {
+      errors.push(
+        `Total topic questions (${topicsTotal}) exceeds chapter count (${chapterDist.count})`
+      );
+    }
+
+    // Validate each topic has enough questions
+    const usedQuestionIds = new Set<string>();
+    chapterDist.topics.forEach(topic => {
+      const topicQuestions = availableQuestions.filter(q => 
+        q.tags.topic === topic.topic && !usedQuestionIds.has(q.id)
+      );
+      
+      if (topicQuestions.length < topic.count) {
+        errors.push(
+          `Not enough questions for topic "${topic.topic}" ` +
+          `(need ${topic.count}, have ${topicQuestions.length})`
+        );
+      } else {
+        // Track used questions
+        topicQuestions.slice(0, topic.count).forEach(q => usedQuestionIds.add(q.id));
+      }
+    });
+
+    return errors;
+  };
+
+  // Update validateSectionsStep to include topic distribution validation
   const validateSectionsStep = (): string[] => {
     const errors: string[] = [];
     
@@ -279,6 +337,16 @@ export const QuizGeneratorWizard: React.FC<QuizGeneratorWizardProps> = ({
         errors.push(`Section ${index + 1}: Please select a subject`);
         return;
       }
+
+      // Validate each chapter's topic distribution
+      section.chapterDistribution.forEach(chapterDist => {
+        const chapterQuestions = getFilteredQuestions(section, chapterDist.chapter);
+        const topicErrors = validateTopicDistribution(chapterDist, chapterQuestions);
+        
+        topicErrors.forEach(error => {
+          errors.push(`Section ${index + 1}, ${chapterDist.chapter}: ${error}`);
+        });
+      });
 
       // Get available questions for this section
       const availableQuestions = getFilteredQuestions(section);
@@ -438,12 +506,12 @@ export const QuizGeneratorWizard: React.FC<QuizGeneratorWizardProps> = ({
       
       // Get questions according to chapter distribution
       setup.chapterDistribution.forEach(chapter => {
-        const chapterQuestions = getFilteredQuestions(setup);
+        const chapterQuestions = getFilteredQuestions(setup, chapter.chapter);
         
         if (chapter.topics && chapter.topics.length > 0) {
           // Select questions by topic distribution
           chapter.topics.forEach(topic => {
-            const topicQuestions = getFilteredQuestions(setup);
+            const topicQuestions = getFilteredQuestions(setup, chapter.chapter);
             const shuffled = [...topicQuestions].sort(() => Math.random() - 0.5);
             sectionQuestions.push(...shuffled.slice(0, topic.count));
           });
@@ -598,6 +666,9 @@ export const QuizGeneratorWizard: React.FC<QuizGeneratorWizardProps> = ({
                             const chapterDist = section.chapterDistribution.find(
                               d => d.chapter === chapter
                             );
+                            const availableQuestions = getFilteredQuestions(section, chapter);
+                            const hasEnoughQuestions = (chapterDist?.count || 0) <= availableQuestions.length;
+                            
                             return (
                               <div key={chapter} className="border rounded-md p-4">
                                 <div className="flex items-center gap-4 mb-2">
@@ -610,10 +681,26 @@ export const QuizGeneratorWizard: React.FC<QuizGeneratorWizardProps> = ({
                                       handleUpdateChapterDistribution(index, chapter, count);
                                     }}
                                     min="0"
-                                    className="w-24 px-2 py-1 border border-gray-300 rounded-md"
+                                    max={availableQuestions.length}
+                                    className={`w-24 px-2 py-1 border rounded-md ${
+                                      hasEnoughQuestions 
+                                        ? 'border-gray-300' 
+                                        : 'border-red-300'
+                                    }`}
                                   />
                                   <span className="text-sm text-gray-500">questions</span>
+                                  <span className={`text-sm ${
+                                    hasEnoughQuestions ? 'text-gray-500' : 'text-red-600'
+                                  }`}>
+                                    (Available: {availableQuestions.length})
+                                  </span>
                                 </div>
+
+                                {!hasEnoughQuestions && (
+                                  <div className="text-sm text-red-600 mb-2">
+                                    Not enough questions available for this chapter
+                                  </div>
+                                )}
 
                                 {chapterDist && chapterDist.count > 0 && (
                                   <div className="ml-4 border-l pl-4">

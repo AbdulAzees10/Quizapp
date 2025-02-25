@@ -74,7 +74,7 @@ export function QuizList({ quizzes, onEditQuiz, onDeleteQuiz, onDuplicateQuiz, o
                                 <QuizPDF
                                   quiz={quiz}
                                   instituteDetails={{
-                                    name: "PROF. P.C.THOMAS CLASSES & CHAITHANYA CLASSES",
+                                    name: quiz.header[0] || "PROF. P.C.THOMAS CLASSES & CHAITHANYA CLASSES",
                                     tagline: "To God, through Education",
                                   }}
                                   testDetails={{

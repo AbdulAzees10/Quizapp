@@ -225,18 +225,19 @@ const TagManager: React.FC<TagManagerProps> = ({
 
           // Process each row
           results.data.forEach(row => {
-            // Add exam type if not exists
-            if (!newTagSystem.exam_types.includes(row.exam_type)) {
-              newTagSystem.exam_types.push(row.exam_type);
+            // Add exam type if not exists (with trimmed value)
+            const trimmedExamType = row.exam_type.trim();
+            if (!newTagSystem.exam_types.includes(trimmedExamType)) {
+              newTagSystem.exam_types.push(trimmedExamType);
               addedTags.exam_types++;
             }
 
             // Add subject to exam type
-            if (!newTagSystem.subjects[row.exam_type]) {
-              newTagSystem.subjects[row.exam_type] = [];
+            if (!newTagSystem.subjects[trimmedExamType]) {
+              newTagSystem.subjects[trimmedExamType] = [];
             }
-            if (!newTagSystem.subjects[row.exam_type].includes(row.subject)) {
-              newTagSystem.subjects[row.exam_type].push(row.subject);
+            if (!newTagSystem.subjects[trimmedExamType].includes(row.subject)) {
+              newTagSystem.subjects[trimmedExamType].push(row.subject);
               addedTags.subjects++;
             }
 

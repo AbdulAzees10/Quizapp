@@ -302,16 +302,17 @@ export function QuizTaker({ quiz, onSubmit }: QuizTakerProps) {
 
   // Status counters
   const getStatusCounts = useCallback(() => {
-    const currentSectionQuestions = quiz.sections[currentSection].questions;
-    return currentSectionQuestions.reduce(
-      (counts, question) => {
-        const status = questionStatus[question.id];
-        if (!status?.visited) counts.notVisited++;
-        else if (status.markedForReview && status.answered)
-          counts.answeredAndMarked++;
-        else if (status.markedForReview) counts.markedForReview++;
-        else if (status.answered) counts.answered++;
-        else counts.notAnswered++;
+    return quiz.sections.reduce(
+      (counts, section) => {
+        section.questions.forEach((question) => {
+          const status = questionStatus[question.id];
+          if (!status?.visited) counts.notVisited++;
+          else if (status.markedForReview && status.answered)
+            counts.answeredAndMarked++;
+          else if (status.markedForReview) counts.markedForReview++;
+          else if (status.answered) counts.answered++;
+          else counts.notAnswered++;
+        });
         return counts;
       },
       {
@@ -322,7 +323,7 @@ export function QuizTaker({ quiz, onSubmit }: QuizTakerProps) {
         answeredAndMarked: 0,
       }
     );
-  }, [currentSection, questionStatus, quiz.sections]);
+  }, [questionStatus, quiz.sections]);
 
   const renderMathContent = (text: string) => {
     return text.split(/(\$\$[^\$]+\$\$|\$[^\$]+\$)/).map((part, index) => {
@@ -884,52 +885,48 @@ export function QuizTaker({ quiz, onSubmit }: QuizTakerProps) {
                 </div>
               </div>
               <div className="grid grid-cols-4 gap-2">
-                {quiz.sections.map((s, sIndex) =>
-                  s.questions.map((q, qIndex) => {
-                    const qStatus = questionStatus[q.id];
-                    const questionNum = getQuestionNumber(sIndex, qIndex);
-                    let statusImage = Logo1; // Not Visited
-                    let textColor = "text-black";
+                {quiz.sections[currentSection].questions.map((q, qIndex) => {
+                  const qStatus = questionStatus[q.id];
+                  // Calculate the continuous question number
+                  const questionNum = getQuestionNumber(currentSection, qIndex);
+                  let statusImage = Logo1; // Not Visited
+                  let textColor = "text-black";
 
-                    if (qStatus?.visited) {
-                      if (qStatus.markedForReview && qStatus.answered) {
-                        statusImage = Logo5; // Answered & Marked for Review
-                        textColor = "text-white";
-                      } else if (qStatus.markedForReview) {
-                        statusImage = Logo4; // Marked for Review
-                        textColor = "text-white";
-                      } else if (qStatus.answered) {
-                        statusImage = Logo3; // Answered
-                      } else {
-                        statusImage = Logo2; // Not Answered
-                      }
+                  if (qStatus?.visited) {
+                    if (qStatus.markedForReview && qStatus.answered) {
+                      statusImage = Logo5;
+                      textColor = "text-white";
+                    } else if (qStatus.markedForReview) {
+                      statusImage = Logo4;
+                      textColor = "text-white";
+                    } else if (qStatus.answered) {
+                      statusImage = Logo3;
+                    } else {
+                      statusImage = Logo2;
                     }
+                  }
 
-                    return (
-                      <button
-                        key={q.id}
-                        onClick={() =>
-                          handleJumpToQuestion(sIndex, qIndex, q.id)
-                        }
-                        className={`p-2 rounded relative ${
-                          currentSection === sIndex &&
-                          currentQuestion === qIndex
-                            ? "ring-2 ring-blue-500"
-                            : ""
-                        } hover:opacity-90`}
-                      >
-                        <img
-                          src={statusImage}
-                          alt="question status"
-                          className="w-full h-full absolute top-0 left-0"
-                        />
-                        <span className={`relative z-10 ${textColor}`}>
-                          {questionNum}
-                        </span>
-                      </button>
-                    );
-                  })
-                )}
+                  return (
+                    <button
+                      key={q.id}
+                      onClick={() => handleJumpToQuestion(currentSection, qIndex, q.id)}
+                      className={`p-2 rounded relative ${
+                        currentSection === currentSection && currentQuestion === qIndex
+                          ? "ring-2 ring-blue-500"
+                          : ""
+                      } hover:opacity-90`}
+                    >
+                      <img
+                        src={statusImage}
+                        alt="question status"
+                        className="w-full h-full absolute top-0 left-0"
+                      />
+                      <span className={`relative z-10 ${textColor}`}>
+                        {questionNum}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Submit Button */}

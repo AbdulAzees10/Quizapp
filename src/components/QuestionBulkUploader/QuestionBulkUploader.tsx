@@ -29,7 +29,7 @@ const convertRowToQuestion = (row: any): Question => ({
   option_c: row.option_c || '',
   option_d: row.option_d || '',
   correct_answer: row.correct_answer,
-  explanation: row.explanation,
+  explanation: row.explanation?.trim() || '',
   image_url: row.question_image_url || '',
   option_a_image_url: row.a_image_url || '',
   option_b_image_url: row.b_image_url || '',
@@ -62,7 +62,7 @@ const validateCsv = async (
   // Required columns
   const requiredColumns = [
     'exam_type', 'subject', 'chapter', 'topic', 'difficulty_level',
-    'question_type', 'source', 'question_text', 'correct_answer', 'explanation'
+    'question_type', 'source', 'question_text', 'correct_answer'
   ];
 
   // Check each row

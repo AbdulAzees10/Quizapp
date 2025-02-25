@@ -1,4 +1,3 @@
-import React from 'react';
 import { Document, Page, Text, View, StyleSheet, Image, Svg } from '@react-pdf/renderer';
 import { Quiz } from '../../types';
 import katex from 'katex';
@@ -8,6 +7,7 @@ interface QuizPDFProps {
   instituteDetails: {
     name: string;
     tagline: string;
+
   };
   testDetails: {
     title: string;
@@ -101,17 +101,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
+    marginBottom: '15mm',
   },
   column: {
-    width: '48%', // Leave some space between columns
+    width: '48%',
   },
   sectionTitle: {
-    marginBottom: '5mm',
+    marginBottom: '8mm',
+    marginTop: '8mm',
     fontWeight: 'bold',
-    width: '100%', // Section titles span full width
+    width: '100%',
   },
   questionContainer: {
-    marginBottom: '5mm',
+    marginBottom: '8mm',
   },
   question: {
     flexDirection: 'row',
@@ -149,12 +151,12 @@ const styles = StyleSheet.create({
   },
   footer: {
     position: 'absolute',
-    bottom: 20,
-    left: 30,
-    right: 30,
+    bottom: '25mm',
+    left: '30pt',
+    right: '30pt',
     textAlign: 'center',
     fontSize: 8,
-    paddingRight: '40pt', // Make space for page number
+    paddingRight: '40pt',
   },
   mathEquation: {
     fontFamily: 'Times-Roman',
@@ -177,26 +179,62 @@ const styles = StyleSheet.create({
   watermark: {
     position: 'absolute',
     top: '50%',
-    left: '50%',
+    left: '20%',
     transform: 'translate(-50%, -50%) rotate(-45deg)',
-    fontSize: 100,
+    fontSize: 20,
     color: 'red',
     opacity: 0.1,
     zIndex: -1,
   },
 });
 
+const getStartingQuestionNumber = (sectionIndex: number, quiz: Quiz): number => {
+  let questionCount = 0;
+  for (let i = 0; i < sectionIndex; i++) {
+    questionCount += quiz.sections[i].questions.length;
+  }
+  return questionCount + 1;
+};
+
 export function QuizPDF({ quiz, instituteDetails, testDetails }: QuizPDFProps) {
   console.log('Quiz data:', quiz);
   console.log('Sections:', quiz.sections);
   
-  // Split questions into two arrays for the columns
   const splitQuestionsIntoColumns = (questions: any[]) => {
-    const midpoint = Math.ceil(questions.length / 2);
-    return [
-      questions.slice(0, midpoint),
-      questions.slice(midpoint)
-    ];
+    const firstColumn: any[] = [];
+    const secondColumn: any[] = [];
+    
+    questions.forEach((question, index) => {
+      // For questions that are part of a selection
+      if (question.selectionGroup) {
+        // If this is the first question in the selection, add to first column
+        if (question.selectionGroupIndex === 0) {
+          firstColumn.push(question);
+        } 
+        // If this is the last question in the selection, add to second column
+        else if (question.selectionGroupIndex === question.selectionGroupTotal - 1) {
+          secondColumn.push(question);
+        }
+        // Otherwise distribute based on position
+        else {
+          if (firstColumn.length <= secondColumn.length) {
+            firstColumn.push(question);
+          } else {
+            secondColumn.push(question);
+          }
+        }
+      } 
+      // For regular questions (not part of selection)
+      else {
+        if (index < Math.ceil(questions.length / 2)) {
+          firstColumn.push(question);
+        } else {
+          secondColumn.push(question);
+        }
+      }
+    });
+
+    return [firstColumn, secondColumn];
   };
 
   const renderOptions = (options: any) => {
@@ -263,20 +301,25 @@ export function QuizPDF({ quiz, instituteDetails, testDetails }: QuizPDFProps) {
 
   return (
     <Document>
+      {/* Questions Pages */}
       {pages.map((pageSections, pageIndex) => (
         <Page 
-          key={pageIndex}
+          key={`questions-${pageIndex}`}
           size="A4" 
           style={styles.page}
         >
           {/* Add Watermark */}
-          <Text style={styles.watermark}>PROF. P.C. THOMAS CLASSES && CHAITHANYA CLASSES</Text>
+          {quiz?.watermark?.enabled && (
+            <Text style={styles.watermark}>
+              {quiz?.watermark?.text}
+            </Text>
+          )}
 
           {/* Header (only on first page) */}
           {pageIndex === 0 && (
             <View style={styles.header}>
               <Text style={styles.instituteName}>{instituteDetails.name}</Text>
-              <Text style={styles.physics}>{quiz.title} - {quiz.createdAt.split('T')[0]}</Text>
+              <Text style={styles.physics}>{quiz.title} - {quiz.createdAt.split('T')[0].split('-').reverse().join('-')}</Text>
               <Text style={styles.physics}>Instructions: </Text>
               {quiz.instructions?.map((item,index)=>{
                 return <Text style={styles.physics} key={index}>{item}</Text>
@@ -294,86 +337,123 @@ export function QuizPDF({ quiz, instituteDetails, testDetails }: QuizPDFProps) {
               <View style={styles.contentContainer}>
                 {/* Left Column */}
                 <View style={styles.column}>
-                  {splitQuestionsIntoColumns(section.questions)[0].map((question, questionIndex) => (
-                    <View key={questionIndex} style={styles.questionContainer}>
-                      <View style={styles.question}>
-                        <Text style={styles.questionNumber}>{questionIndex + 1}.</Text>
-                        <View style={styles.questionContent}>
-                          {renderMathEquation(question.question_text)}
-                          {question.image_url && (
-                            <Image
-                              src={question.image_url}
-                              style={{ maxWidth: '150pt', marginTop: '3mm' }}
-                            />
-                          )}
+                  {splitQuestionsIntoColumns(section.questions)[0].map((question, questionIndex) => {
+                    const startingNumber = getStartingQuestionNumber(quiz.sections.indexOf(section), quiz);
+                    const questionNumber = startingNumber + questionIndex;
+                    return (
+                      <View key={questionIndex} style={styles.questionContainer}>
+                        <View style={styles.question}>
+                          <Text style={styles.questionNumber}>{questionNumber}.</Text>
+                          <View style={styles.questionContent}>
+                            {renderMathEquation(question.question_text)}
+                            {question.image_url && (
+                              <Image
+                                src={question.image_url}
+                                style={{ maxWidth: '150pt', marginTop: '3mm' }}
+                              />
+                            )}
+                          </View>
                         </View>
+                        {renderOptions(question)}
                       </View>
-                      {renderOptions(question)}
-                    </View>
-                  ))}
+                    );
+                  })}
                 </View>
 
                 {/* Right Column */}
                 <View style={styles.column}>
-                  {splitQuestionsIntoColumns(section.questions)[1].map((question, questionIndex) => (
-                    <View key={questionIndex} style={styles.questionContainer}>
-                      <View style={styles.question}>
-                        <Text style={styles.questionNumber}>
-                          {questionIndex + splitQuestionsIntoColumns(section.questions)[0].length + 1}.
-                        </Text>
-                        <View style={styles.questionContent}>
-                          {renderMathEquation(question.question_text)}
-                          {question.image_url && (
-                            <Image
-                              src={question.image_url}
-                              style={{ maxWidth: '150pt', marginTop: '3mm' }}
-                            />
-                          )}
+                  {splitQuestionsIntoColumns(section.questions)[1].map((question, questionIndex) => {
+                    const startingNumber = getStartingQuestionNumber(quiz.sections.indexOf(section), quiz);
+                    const questionNumber = startingNumber + splitQuestionsIntoColumns(section.questions)[0].length + questionIndex;
+                    return (
+                      <View key={questionIndex} style={styles.questionContainer}>
+                        <View style={styles.question}>
+                          <Text style={styles.questionNumber}>{questionNumber}.</Text>
+                          <View style={styles.questionContent}>
+                            {renderMathEquation(question.question_text)}
+                            {question.image_url && (
+                              <Image
+                                src={question.image_url}
+                                style={{ maxWidth: '150pt', marginTop: '3mm' }}
+                              />
+                            )}
+                          </View>
                         </View>
+                        {renderOptions(question)}
                       </View>
-                      {renderOptions(question)}
-                    </View>
-                  ))}
+                    );
+                  })}
                 </View>
               </View>
             </View>
           ))}
 
-          {/* Answer Key - Only show on the last page */}
-          {pageIndex === pages.length - 1 && (
-            <View style={styles.answerKey}>
-              <Text style={styles.sectionTitle}>Answer Key</Text>
-              <View style={styles.contentContainer}>
-                {quiz.sections.map((section, sectionIndex) => (
-                  <View key={sectionIndex} style={styles.answerSection}>
-                    <Text style={{ fontWeight: 'bold', marginBottom: '2mm' }}>{section.name}</Text>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                      {section.questions.map((question, qIndex) => (
-                        <Text key={qIndex} style={styles.answer}>
-                            {console.log("quetsion",question)}
-                          {qIndex + 1}. {question.correct_answer?.toUpperCase() || '-'}{' '}
-                        </Text>
-                      ))}
-                    </View>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
-
           {/* Footer */}
           <View fixed style={styles.footer}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
               <Text>{instituteDetails.tagline}</Text>
+              {quiz.footer ? (
+                <Text>{quiz.footer}</Text>
+              ) : (
+                <View>
+                  <Text>Prof. P.C.Thomas Classes, TC-6-1417, East Fort, Thrissur-5 </Text>
+                  <Text>Chaithanya Classes, Sankarayya Road, West Fort, Thrissur-4</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        </Page>
+      ))}
+
+      {/* Answer Key Page */}
+      <Page
+        size="A4"
+        style={styles.page}
+      >
+        {/* Add Watermark on answer key page if enabled */}
+        {quiz?.watermark?.enabled && (
+          <Text style={styles.watermark}>
+            {quiz?.watermark?.text}
+          </Text>
+        )}
+
+        <View style={styles.answerKey}>
+          <Text style={[styles.sectionTitle, { marginBottom: '10mm' }]}>Answer Key - {quiz.title}</Text>
+          <View style={styles.contentContainer}>
+            {quiz.sections.map((section, sectionIndex) => (
+              <View key={sectionIndex} style={styles.answerSection}>
+                <Text style={{ fontWeight: 'bold', marginBottom: '2mm' }}>{section.name}</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                  {section.questions.map((question, qIndex) => {
+                    const startingNumber = getStartingQuestionNumber(sectionIndex, quiz);
+                    const questionNumber = startingNumber + qIndex;
+                    return (
+                      <Text key={qIndex} style={styles.answer}>
+                        {questionNumber}. {question.correct_answer?.toUpperCase() || '-'}{' '}
+                      </Text>
+                    );
+                  })}
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* Footer on answer key page */}
+        <View fixed style={styles.footer}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <Text>{instituteDetails.tagline}</Text>
+            {quiz.footer ? (
+              <Text>{quiz.footer}</Text>
+            ) : (
               <View>
                 <Text>Prof. P.C.Thomas Classes, TC-6-1417, East Fort, Thrissur-5 </Text>
                 <Text>Chaithanya Classes, Sankarayya Road, West Fort, Thrissur-4</Text>
               </View>
-            </View>
+            )}
           </View>
-          
-        </Page>
-      ))}
+        </View>
+      </Page>
     </Document>
   );
 } 

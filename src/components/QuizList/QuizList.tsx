@@ -1,5 +1,10 @@
 import React from 'react';
+import ReactDOM from 'react-dom/client';
+import ReactDOMServer from 'react-dom/server';
 import { Quiz } from '../../types';
+import { PrintView } from '../PrintView/PrintView';
+import { PDFDownloadLink } from '@react-pdf/renderer';
+import { QuizPDF } from '../PrintView/QuizPDF';
 
 interface QuizListProps {
   quizzes: Quiz[];
@@ -10,6 +15,10 @@ interface QuizListProps {
 }
 
 export function QuizList({ quizzes, onEditQuiz, onDeleteQuiz, onDuplicateQuiz, onTakeQuiz }: QuizListProps) {
+  const handlePrintQuiz = (quiz: Quiz) => {
+    // The PDF generation will be handled by PDFDownloadLink
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="bg-white shadow rounded-lg">
@@ -60,6 +69,33 @@ export function QuizList({ quizzes, onEditQuiz, onDeleteQuiz, onDuplicateQuiz, o
                         </td>
                         <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
                           <div className="flex justify-end gap-2">
+                            <PDFDownloadLink
+                              document={
+                                <QuizPDF
+                                  quiz={quiz}
+                                  instituteDetails={{
+                                    name: "PROF. P.C.THOMAS CLASSES & CHAITHANYA CLASSES",
+                                    tagline: "To God, through Education",
+                                  }}
+                                  testDetails={{
+                                    title: quiz.title,
+                                    batch: `${quiz.title} - ${new Date(quiz.createdAt).toLocaleDateString('en-GB')}`,
+                                    date: new Date(quiz.createdAt).toLocaleDateString('en-GB'),
+                                    subject: quiz.sections[0].name 
+                                  }}
+                                />
+                              }
+                              fileName={`${quiz.title}.pdf`}
+                            >
+                              {({ loading }) => (
+                                <button
+                                  className="text-purple-600 hover:text-purple-900"
+                                  disabled={loading}
+                                >
+                                  {loading ? 'Generating PDF...' : 'Download PDF'}
+                                </button>
+                              )}
+                            </PDFDownloadLink>
                             <button
                               onClick={() => onTakeQuiz(quiz)}
                               className="text-green-600 hover:text-green-900"

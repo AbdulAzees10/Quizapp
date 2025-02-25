@@ -1,26 +1,29 @@
 /* Base styles (applied to both screen and print) */
 .print-view {
   background: white;
-  color: black;
   font-family: "Times New Roman", serif;
-  line-height: 1.5;
-  padding: 2cm;
+  line-height: 1.4;
   max-width: 210mm; /* A4 width */
   margin: 0 auto;
+  padding: 20mm;
 }
 
 /* Header styles */
 .header {
   text-align: center;
-  margin-bottom: 2rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #000;
+  margin-bottom: 15mm;
 }
 
 .institute-name {
-  font-size: 16pt;
+  font-size: 12pt;
   font-weight: bold;
-  margin: 0 0 0.5rem 0;
+  margin-bottom: 5mm;
+}
+
+.questions {
+  column-count: 2;
+  column-gap: 8mm;
+  text-align: left;
 }
 
 .test-title {
@@ -59,20 +62,20 @@
 
 /* Question styles */
 .question {
-  margin-bottom: 1.5rem;
   break-inside: avoid;
+  margin-bottom: 6mm;
+  page-break-inside: avoid;
 }
 
 .question-header {
   display: flex;
   align-items: baseline;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
+  gap: 2mm;
 }
 
 .question-number {
-  font-weight: bold;
-  min-width: 1.5rem;
+  font-weight: normal;
+  min-width: 5mm;
 }
 
 .marks {
@@ -81,7 +84,7 @@
 }
 
 .question-content {
-  margin-left: 1.5rem;
+  margin-left: 5mm;
 }
 
 .question-text {
@@ -97,20 +100,18 @@
 /* Options styles */
 .options {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-  margin-top: 1rem;
+  grid-template-columns: 1fr;
+  gap: 2mm;
+  margin-top: 2mm;
 }
 
 .option {
   display: flex;
-  gap: 0.5rem;
-  break-inside: avoid;
+  gap: 2mm;
 }
 
 .option-label {
-  font-weight: bold;
-  min-width: 1.5rem;
+  min-width: 4mm;
 }
 
 .option-content {
@@ -140,12 +141,11 @@
 @media print {
   @page {
     size: A4;
-    margin: 1.5cm 1cm;
+    margin: 20mm;
   }
 
   .print-view {
     padding: 0;
-    max-width: none;
   }
 
   /* Ensure proper page breaks */
@@ -154,13 +154,8 @@
     page-break-after: auto;
   }
 
-  .question {
-    page-break-inside: avoid;
-  }
-
-  /* Ensure images print properly */
   img {
-    max-width: 100% !important;
+    max-width: 100%;
     page-break-inside: avoid;
   }
 

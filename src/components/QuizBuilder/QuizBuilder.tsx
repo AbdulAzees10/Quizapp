@@ -23,7 +23,25 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
 }) => {
   // Helper to get used questions across all sections except the current section
   const getUsedQuestions = (currentSectionId: string) => {
-    return new Set<string>(); // Return empty set to allow all questions
+    const usedQuestionIds = new Set<string>();
+    
+    // Get all questions used in other sections of this quiz
+    quiz.sections.forEach(section => {
+      if (section.id !== currentSectionId) {
+        section.questions.forEach(question => {
+          usedQuestionIds.add(question.id);
+        });
+      }
+    });
+    
+    return usedQuestionIds;
+  };
+
+  // Filter available questions for the QuizSectionBuilder
+  const getAvailableQuestions = (currentSectionId: string) => {
+    const usedQuestions = getUsedQuestions(currentSectionId);
+    // Return only questions that haven't been used in other sections
+    return questions.filter(question => !usedQuestions.has(question.id));
   };
 
   const [quiz, setQuiz] = useState<Quiz>(() => initialQuiz || {
@@ -48,24 +66,17 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
       (sum, section) => sum + section.marks * section.questions.length,
       0
     );
-    const totalDuration = quiz.sections.reduce(
-      (sum, section) => sum + (section.duration || 0),
-      0
-    );
 
-    // Only update if the calculated values are different from current values
-    if (totalMarks !== quiz.totalMarks ) {
-      // || totalDuration !== quiz.totalDuration
+    // Only update marks, not duration
+    if (totalMarks !== quiz.totalMarks) {
       setQuiz(prev => ({
         ...prev,
         totalMarks,
-        totalDuration,
         updatedAt: new Date().toISOString(),
       }));
     }
   }, [quiz.sections.map(section => ({
     marks: section.marks,
-    duration: section.duration,
     questionCount: section.questions.length
   }))]);
 
@@ -256,9 +267,9 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
             <QuizSectionBuilder
               key={index}
               section={section}
-              questions={questions}
+              questions={getAvailableQuestions(section.id)}
               tagSystem={tagSystem}
-              usedQuestions={getUsedQuestions(section.id)}
+              usedQuestions={new Set<string>()}
               quizzes={quizzes}
               onChange={(updatedSection) =>
                 setQuiz(prev => ({

@@ -57,29 +57,20 @@ export const QuizGeneratorWizard: React.FC<QuizGeneratorWizardProps> = ({
   const getAvailableTopics = (chapter: string): string[] => 
     tagSystem.topics[chapter] || [];
 
-  // Get filtered questions for a section and chapter/topic
-  const getFilteredQuestions = (section: SectionSetup, chapter?: string, topic?: string): Question[] => {
-    return questions?.filter(q => {
-      // Skip if question is already used in other sections or in usedQuestions set
+  // Update getFilteredQuestions to handle tags correctly
+  const getFilteredQuestions = (section: SectionSetup): Question[] => {
+    if (!section.subject || !examType) return [];
+
+    return questions.filter(q => {
       if (usedQuestions.has(q.id)) return false;
-      
-      // Basic filtering conditions
-      if (q.tags.exam_type !== examType) return false;
-      if (q.tags.subject !== section.subject) return false;
-      if (chapter && q.tags.chapter !== chapter) return false;
-      if (topic && q.tags.topic !== topic) return false;
-      
-      // Check if question is used in other sections
-      const isUsedInOtherSections = sections.some(s => 
-        s.id !== section.id && // Skip current section
-        s.subject === q.tags.subject && // Only check sections with same subject
-        s.chapterDistribution.some(cd => 
-          cd.chapter === q.tags.chapter || 
-          cd.topics.some(t => t.topic === q.tags.topic)
-        )
+
+      const matchesExamType = q.tags.exam_type === examType;
+      const matchesSubject = q.tags.subject === section.subject;
+      const matchesChapter = section.chapterDistribution.some(cd => 
+        cd.chapter === q.tags.chapter
       );
 
-      return !isUsedInOtherSections;
+      return matchesExamType && matchesSubject && matchesChapter;
     });
   };
 
@@ -88,7 +79,68 @@ export const QuizGeneratorWizard: React.FC<QuizGeneratorWizardProps> = ({
     return chapterDist.reduce((total: number, chapter) => total + chapter.count, 0);
   };
 
-  // Add a new section
+  // Update calculateInitialDistributions to use tags
+  const calculateInitialDistributions = (section: SectionSetup) => {
+    const availableQuestions = getFilteredQuestions(section);
+    
+    // Count questions by difficulty and type
+    const difficultyCount = {
+      Easy: availableQuestions.filter(q => q.tags.difficulty_level === 'Easy').length,
+      Medium: availableQuestions.filter(q => q.tags.difficulty_level === 'Medium').length,
+      Hard: availableQuestions.filter(q => q.tags.difficulty_level === 'Hard').length
+    };
+
+    const typeCount = {
+      MCQ: availableQuestions.filter(q => q.tags.question_type === 'MCQ').length,
+      MMCQ: availableQuestions.filter(q => q.tags.question_type === 'MMCQ').length,
+      Numeric: availableQuestions.filter(q => q.tags.question_type === 'Numeric').length
+    };
+
+    const totalQuestions = availableQuestions.length;
+
+    console.log('Available questions:', {
+      total: totalQuestions,
+      byDifficulty: difficultyCount,
+      byType: typeCount
+    });
+
+    if (totalQuestions === 0) {
+      return {
+        difficultyDistribution: section.difficultyDistribution || { Easy: 30, Medium: 50, Hard: 20 },
+        typeDistribution: section.typeDistribution || { MCQ: 60, MMCQ: 20, Numeric: 20 }
+      };
+    }
+
+    // Calculate percentages
+    const calculatePercentages = (counts: Record<string, number>) => {
+      const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
+      if (total === 0) return null;
+
+      const distribution = Object.fromEntries(
+        Object.entries(counts).map(([key, count]) => [
+          key,
+          Math.round((count / total) * 100)
+        ])
+      );
+
+      // Adjust to ensure 100% total
+      const distTotal = Object.values(distribution).reduce((sum, val) => sum + val, 0);
+      if (distTotal !== 100) {
+        const maxKey = Object.entries(distribution)
+          .reduce((a, b) => a[1] > b[1] ? a : b)[0];
+        distribution[maxKey] += (100 - distTotal);
+      }
+
+      return distribution;
+    };
+
+    return {
+      difficultyDistribution: calculatePercentages(difficultyCount) || section.difficultyDistribution,
+      typeDistribution: calculatePercentages(typeCount) || section.typeDistribution
+    };
+  };
+
+  // Update the handleAddSection function
   const handleAddSection = () => {
     const newSection: SectionSetup = {
       id: crypto.randomUUID(),
@@ -173,7 +225,15 @@ export const QuizGeneratorWizard: React.FC<QuizGeneratorWizardProps> = ({
   // Update a section
   const handleUpdateSection = (index: number, updates: Partial<SectionSetup>): void => {
     setSections(prev => prev.map((section, i) => 
-      i === index ? { ...section, ...updates } : section
+      i === index 
+        ? { 
+            ...section, 
+            ...updates,
+            // Ensure distributions total 100%
+            difficultyDistribution: updates.difficultyDistribution || section.difficultyDistribution,
+            typeDistribution: updates.typeDistribution || section.typeDistribution
+          } 
+        : section
     ));
   };
 
@@ -188,57 +248,101 @@ export const QuizGeneratorWizard: React.FC<QuizGeneratorWizardProps> = ({
     return [];
   };
 
+  // Update getAvailableQuestionsByDifficulty to use tags
+  const getAvailableQuestionsByDifficulty = (section: SectionSetup): Record<DifficultyLevel, number> => {
+    const filteredQuestions = getFilteredQuestions(section);
+    
+    return {
+      Easy: filteredQuestions.filter(q => q.tags.difficulty_level === 'Easy').length,
+      Medium: filteredQuestions.filter(q => q.tags.difficulty_level === 'Medium').length,
+      Hard: filteredQuestions.filter(q => q.tags.difficulty_level === 'Hard').length
+    };
+  };
+
+  // Update getAvailableQuestionsByType to use tags
+  const getAvailableQuestionsByType = (section: SectionSetup): Record<QuestionType, number> => {
+    const filteredQuestions = getFilteredQuestions(section);
+    
+    return {
+      MCQ: filteredQuestions.filter(q => q.tags.question_type === 'MCQ').length,
+      MMCQ: filteredQuestions.filter(q => q.tags.question_type === 'MMCQ').length,
+      Numeric: filteredQuestions.filter(q => q.tags.question_type === 'Numeric').length
+    };
+  };
+
+  // Update the validateSectionsStep function to include difficulty distribution validation
   const validateSectionsStep = (): string[] => {
     const errors: string[] = [];
-    if (sections.length === 0) {
-      errors.push('Please add at least one section');
-      return errors;
-    }
-
+    
     sections.forEach((section, index) => {
       if (!section.subject) {
         errors.push(`Section ${index + 1}: Please select a subject`);
+        return;
       }
 
-      const total = Object.values(section.difficultyDistribution).reduce((sum, val) => sum + val, 0);
-      if (total !== 100) {
-        errors.push(`Section ${index + 1}: Difficulty distribution must total 100%`);
-      }
+      // Get available questions for this section
+      const availableQuestions = getFilteredQuestions(section);
+      console.log('Available questions for validation:', availableQuestions);
 
-      const typeTotal = Object.values(section.typeDistribution).reduce((sum, val) => sum + val, 0);
-      if (typeTotal !== 100) {
-        errors.push(`Section ${index + 1}: Question type distribution must total 100%`);
-      }
+      // Calculate required counts based on percentages and total questions
+      const totalQuestionsNeeded = section.chapterDistribution.reduce(
+        (sum, chapter) => sum + chapter.count, 
+        0
+      );
 
-      if (section.chapterDistribution.length === 0) {
-        errors.push(`Section ${index + 1}: Please specify chapter distribution`);
-      }
+      // Validate difficulty distribution
+      const availableByDifficulty = {
+        Easy: availableQuestions.filter(q => q.tags.difficulty_level === 'Easy').length,
+        Medium: availableQuestions.filter(q => q.tags.difficulty_level === 'Medium').length,
+        Hard: availableQuestions.filter(q => q.tags.difficulty_level === 'Hard').length
+      };
 
-      section.chapterDistribution.forEach(chapter => {
-        const availableQuestions = getFilteredQuestions(section, chapter.chapter);
-        if (availableQuestions.length < chapter.count) {
-          errors.push(
-            `Section ${index + 1}, Chapter ${chapter.chapter}: Not enough questions available (need ${chapter.count}, have ${availableQuestions.length})`
-          );
-        }
+      Object.entries(section.difficultyDistribution).forEach(([difficulty, percentage]) => {
+        const neededCount = Math.ceil((percentage / 100) * totalQuestionsNeeded);
+        const availableCount = availableByDifficulty[difficulty as DifficultyLevel];
 
-        const topicTotal = chapter.topics.reduce((sum, topic) => sum + topic.count, 0);
-        if (topicTotal > chapter.count) {
-          errors.push(
-            `Section ${index + 1}, Chapter ${chapter.chapter}: Topic distribution (${topicTotal}) exceeds chapter count (${chapter.count})`
-          );
-        }
-
-        chapter.topics.forEach(topic => {
-          const availableTopicQuestions = getFilteredQuestions(section, chapter.chapter, topic.topic);
-          if (availableTopicQuestions.length < topic.count) {
-            errors.push(
-              `Section ${index + 1}, Chapter ${chapter.chapter}, Topic ${topic.topic}: Not enough questions available (need ${topic.count}, have ${availableTopicQuestions.length})`
-            );
-          }
+        console.log(`${difficulty} validation:`, {
+          needed: neededCount,
+          available: availableCount,
+          percentage,
+          totalNeeded: totalQuestionsNeeded
         });
+
+        if (neededCount > availableCount) {
+          errors.push(
+            `Section ${index + 1}: Not enough ${difficulty} questions available. ` +
+            `Need ${neededCount} (${percentage}%), but only have ${availableCount}`
+          );
+        }
+      });
+
+      // Validate type distribution
+      const availableByType = {
+        MCQ: availableQuestions.filter(q => q.tags.question_type === 'MCQ').length,
+        MMCQ: availableQuestions.filter(q => q.tags.question_type === 'MMCQ').length,
+        Numeric: availableQuestions.filter(q => q.tags.question_type === 'Numeric').length
+      };
+
+      Object.entries(section.typeDistribution).forEach(([type, percentage]) => {
+        const neededCount = Math.ceil((percentage / 100) * totalQuestionsNeeded);
+        const availableCount = availableByType[type as QuestionType];
+
+        console.log(`${type} validation:`, {
+          needed: neededCount,
+          available: availableCount,
+          percentage,
+          totalNeeded: totalQuestionsNeeded
+        });
+
+        if (neededCount > availableCount) {
+          errors.push(
+            `Section ${index + 1}: Not enough ${type} questions available. ` +
+            `Need ${neededCount} (${percentage}%), but only have ${availableCount}`
+          );
+        }
       });
     });
+
     return errors;
   };
 
@@ -334,12 +438,12 @@ export const QuizGeneratorWizard: React.FC<QuizGeneratorWizardProps> = ({
       
       // Get questions according to chapter distribution
       setup.chapterDistribution.forEach(chapter => {
-        const chapterQuestions = getFilteredQuestions(setup, chapter.chapter);
+        const chapterQuestions = getFilteredQuestions(setup);
         
         if (chapter.topics && chapter.topics.length > 0) {
           // Select questions by topic distribution
           chapter.topics.forEach(topic => {
-            const topicQuestions = getFilteredQuestions(setup, chapter.chapter, topic.topic);
+            const topicQuestions = getFilteredQuestions(setup);
             const shuffled = [...topicQuestions].sort(() => Math.random() - 0.5);
             sectionQuestions.push(...shuffled.slice(0, topic.count));
           });
@@ -362,6 +466,31 @@ export const QuizGeneratorWizard: React.FC<QuizGeneratorWizardProps> = ({
 
     onGenerate(generatedSections);
   };
+
+  // Update the effect to recalculate distributions when needed
+  useEffect(() => {
+    // Create a stable reference for section changes
+    const sectionsToUpdate = sections.filter(
+      section => section.subject && section.chapterDistribution.length > 0
+    );
+
+    // Only update if distributions need to be recalculated
+    sectionsToUpdate.forEach((section, index) => {
+      const { difficultyDistribution, typeDistribution } = calculateInitialDistributions(section);
+      
+      // Check if distributions have actually changed before updating
+      const hasDistributionChanged = 
+        JSON.stringify(section.difficultyDistribution) !== JSON.stringify(difficultyDistribution) ||
+        JSON.stringify(section.typeDistribution) !== JSON.stringify(typeDistribution);
+
+      if (hasDistributionChanged) {
+        handleUpdateSection(index, {
+          difficultyDistribution,
+          typeDistribution
+        });
+      }
+    });
+  }, [examType]); // Only depend on examType changes
 
   return (
     <div className="space-y-6">
@@ -534,27 +663,40 @@ export const QuizGeneratorWizard: React.FC<QuizGeneratorWizardProps> = ({
                           Difficulty Distribution (%)
                         </h4>
                         <div className="space-y-2">
-                          {Object.entries(section.difficultyDistribution).map(([level, percentage]) => (
-                            <div key={level} className="flex items-center space-x-2">
-                              <label className="w-20 text-sm">{level}</label>
-                              <input
-                                type="number"
-                                value={percentage}
-                                onChange={e => {
-                                  const newValue = parseInt(e.target.value) || 0;
-                                  handleUpdateSection(index, {
-                                    difficultyDistribution: {
-                                      ...section.difficultyDistribution,
-                                      [level]: newValue
-                                    }
-                                  });
-                                }}
-                                min="0"
-                                max="100"
-                                className="w-20 px-2 py-1 text-sm border-gray-300 rounded-md"
-                              />
-                            </div>
-                          ))}
+                          {Object.entries(section.difficultyDistribution).map(([difficulty, percentage]) => {
+                            const availableByDifficulty = getAvailableQuestionsByDifficulty(section);
+                            const requestedCount = Math.ceil((percentage / 100) * section.questionCount);
+                            const availableCount = availableByDifficulty[difficulty as DifficultyLevel];
+                            const isValid = requestedCount <= availableCount;
+
+                            return (
+                              <div key={difficulty} className="space-y-1">
+                                <div className="flex items-center space-x-2">
+                                  <label className="w-20 text-sm">{difficulty}</label>
+                                  <input
+                                    type="number"
+                                    value={percentage}
+                                    onChange={e => {
+                                      const newValue = parseInt(e.target.value) || 0;
+                                      handleUpdateSection(index, {
+                                        difficultyDistribution: {
+                                          ...section.difficultyDistribution,
+                                          [difficulty]: newValue
+                                        }
+                                      });
+                                    }}
+                                    min="0"
+                                    max="100"
+                                    className="w-20 px-2 py-1 text-sm border-gray-300 rounded-md"
+                                  />
+                                </div>
+                                <div className={`text-xs ${isValid ? 'text-gray-500' : 'text-red-600'}`}>
+                                  Available: {availableCount} questions
+                                  {!isValid && ` (Need ${requestedCount})`}
+                                </div>
+                              </div>
+                            );
+                          })}
                           <div className={`text-sm ${
                             Object.values(section.difficultyDistribution).reduce((sum, val) => sum + val, 0) === 100
                               ? 'text-green-600'
@@ -570,27 +712,40 @@ export const QuizGeneratorWizard: React.FC<QuizGeneratorWizardProps> = ({
                           Question Type Distribution (%)
                         </h4>
                         <div className="space-y-2">
-                          {Object.entries(section.typeDistribution).map(([type, percentage]) => (
-                            <div key={type} className="flex items-center space-x-2">
-                              <label className="w-20 text-sm">{type}</label>
-                              <input
-                                type="number"
-                                value={percentage}
-                                onChange={e => {
-                                  const newValue = parseInt(e.target.value) || 0;
-                                  handleUpdateSection(index, {
-                                    typeDistribution: {
-                                      ...section.typeDistribution,
-                                      [type]: newValue
-                                    }
-                                  });
-                                }}
-                                min="0"
-                                max="100"
-                                className="w-20 px-2 py-1 text-sm border-gray-300 rounded-md"
-                              />
-                            </div>
-                          ))}
+                          {Object.entries(section.typeDistribution).map(([type, percentage]) => {
+                            const availableByType = getAvailableQuestionsByType(section);
+                            const requestedCount = Math.ceil((percentage / 100) * section.questionCount);
+                            const availableCount = availableByType[type as QuestionType];
+                            const isValid = requestedCount <= availableCount;
+
+                            return (
+                              <div key={type} className="space-y-1">
+                                <div className="flex items-center space-x-2">
+                                  <label className="w-20 text-sm">{type}</label>
+                                  <input
+                                    type="number"
+                                    value={percentage}
+                                    onChange={e => {
+                                      const newValue = parseInt(e.target.value) || 0;
+                                      handleUpdateSection(index, {
+                                        typeDistribution: {
+                                          ...section.typeDistribution,
+                                          [type]: newValue
+                                        }
+                                      });
+                                    }}
+                                    min="0"
+                                    max="100"
+                                    className="w-20 px-2 py-1 text-sm border-gray-300 rounded-md"
+                                  />
+                                </div>
+                                <div className={`text-xs ${isValid ? 'text-gray-500' : 'text-red-600'}`}>
+                                  Available: {availableCount} questions
+                                  {!isValid && ` (Need ${requestedCount})`}
+                                </div>
+                              </div>
+                            );
+                          })}
                           <div className={`text-sm ${
                             Object.values(section.typeDistribution).reduce((sum, val) => sum + val, 0) === 100
                               ? 'text-green-600'

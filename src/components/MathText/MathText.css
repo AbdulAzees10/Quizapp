@@ -1,0 +1,10 @@
+@media print {
+    .question {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    
+    .options {
+      break-inside: avoid;
+    }
+  }

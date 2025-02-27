@@ -5,7 +5,7 @@ import { QuizGeneratorWizard } from "./QuizGeneratorWizard";
 import { QuizPreview } from "../QuizPreview/QuizPreview";
 import { Modal } from "./Modal";
 import { toast } from "react-hot-toast";
-
+import { ErrorBoundary } from "react-error-boundary";
 
 interface QuizBuilderProps {
   questions: Question[];
@@ -71,8 +71,8 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
   const [showGeneratorWizard, setShowGeneratorWizard] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [newSection, setNewSection] = useState<QuizSection | null>(null);
-  const [isAddSectionModalOpen, setIsAddSectionModalOpen] = useState(false);
+  // const [newSection, setNewSection] = useState<QuizSection | null>(null);
+  // const [isAddSectionModalOpen, setIsAddSectionModalOpen] = useState(false);
 
 
   // Calculate totals whenever sections change
@@ -202,14 +202,14 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
       setIsSaving(false);
     }
   };
-  // Function to handle adding a new section
-  const handleAddSection = (section: QuizSection) => {
-    setQuiz((prev) => ({
-      ...prev,
-      sections: [...prev.sections, section],
-    }));
-    setIsAddSectionModalOpen(false); // Close the modal
-  };
+  // // Function to handle adding a new section
+  // const handleAddSection = (section: QuizSection) => {
+  //   setQuiz((prev) => ({
+  //     ...prev,
+  //     sections: [...prev.sections, section],
+  //   }));
+  //   setIsAddSectionModalOpen(false); // Close the modal
+  // };
 
   return (
     <div className="max-w-4xl mx-auto p-6">
@@ -441,7 +441,7 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
               >
                 Auto Generate
               </button>
-              {/* <button
+              <button
                 onClick={() =>
                   setQuiz(prev => ({
                     ...prev,
@@ -461,8 +461,8 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
                 className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700"
               >
                 Add Section
-              </button> */}
-              {/* Add Section Button */}
+              </button>
+              {/* Add Section Button
               <button
                 onClick={() => {
                   setNewSection({
@@ -478,11 +478,11 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
                 className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700"
               >
                 Add Section
-              </button>
+              </button> */}
             </div>
           </div>
 
-          {/* Modal for Adding a New Section */}
+          {/* Modal for Adding a New Section
           { newSection && (
             <QuizSectionBuilder
               section={newSection}
@@ -494,7 +494,7 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
               }}
               onDelete={() => setIsAddSectionModalOpen(false)} // Close modal on delete
             />
-          )}
+          )} */}
 
           {quiz.sections.map((section, index) => (
             <QuizSectionBuilder
@@ -512,17 +512,12 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
                   ),
                 }))
               }
-              onDelete={() => {
-                console.log("Deleting section with id:", section.id);
-                setQuiz((prev) => {
-                  const updatedSections = prev.sections.filter((s) => s.id !== section.id);
-                  console.log("Updated sections:", updatedSections);
-                  return {
-                    ...prev,
-                    sections: updatedSections,
-                  };
-                });
-              }}
+              onDelete={() =>
+                setQuiz(prev => ({
+                  ...prev,
+                  sections: prev.sections.filter((s) => s.id !== section.id),
+                }))
+              }
             />
           ))}
         </div>
@@ -567,7 +562,8 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
 
       {/* Quiz Generator Wizard Modal */}
       {showGeneratorWizard && (
-        <SectionModal onClose={() => setShowGeneratorWizard(false)}>
+        <ErrorBoundary fallback={<div>Error loading quiz generator wizard</div>}>
+        <Modal onClose={() => setShowGeneratorWizard(false)}>
           <QuizGeneratorWizard
             questions={questions || []}
             tagSystem={tagSystem}
@@ -575,7 +571,8 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
             onCancel={() => setShowGeneratorWizard(false)}
             usedQuestions={getUsedQuestions("")}
           />
-        </SectionModal>
+        </Modal>
+        </ErrorBoundary>
       )}
 
       {/* Quiz Preview Modal */}

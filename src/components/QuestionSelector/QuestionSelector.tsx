@@ -32,7 +32,7 @@ export const QuestionSelector: React.FC<QuestionSelectorProps> = ({
   });
   const [isReplaceModalOpen, setIsReplaceModalOpen] = useState(false);
   const [replacingQuestionId, setReplacingQuestionId] = useState<string | null>(null);
-
+  const [selectedQuestionsToSave, setSelectedQuestionsToSave] = useState<Question[]>([]);
   // Save questionsPerPage preference to localStorage
   useEffect(() => {
     localStorage.setItem('questionsPerPage', questionsPerPage.toString());
@@ -101,15 +101,20 @@ export const QuestionSelector: React.FC<QuestionSelectorProps> = ({
   };
 
   const handleQuestionToggle = (question: Question) => {
-    const isSelected = selectedQuestions.some(q => q.id === question.id);
+    const isSelected = selectedQuestionsToSave.some(q => q.id === question.id);
     if (isSelected) {
-      onSelect(selectedQuestions.filter(q => q.id !== question.id));
+      setSelectedQuestionsToSave(selectedQuestionsToSave.filter(q => q.id !== question.id));
     } else {
-      if (maxSelect && selectedQuestions.length >= maxSelect) {
+      if (maxSelect && selectedQuestionsToSave.length >= maxSelect) {
         return;
       }
-      onSelect([...selectedQuestions, question]);
+      setSelectedQuestionsToSave([...selectedQuestionsToSave, question]);
     }
+  };
+
+  const handleSaveSection = () => {
+    onSelect(selectedQuestionsToSave);
+    setSelectedQuestionsToSave([]); // Clear the selection after saving
   };
 
   const handleReplaceQuestion = (newQuestionId: string) => {
@@ -186,7 +191,7 @@ export const QuestionSelector: React.FC<QuestionSelectorProps> = ({
 
       {/* Selected Count */}
       <div className="text-sm text-gray-600">
-        Selected {selectedQuestions.length} questions
+        Selected {selectedQuestionsToSave.length} questions
         {maxSelect && ` (max ${maxSelect})`}
       </div>
 
@@ -203,13 +208,19 @@ export const QuestionSelector: React.FC<QuestionSelectorProps> = ({
             setCurrentPage(1);
           }}
         />
+        <button
+          onClick={handleSaveSection}
+          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+        >
+          Save Section
+        </button>
 
         {/* Questions */}
         {filteredQuestions
           .filter((question) => !selectedQuestions.some((q) => q.id === question.id))
           .slice((currentPage - 1) * questionsPerPage, currentPage * questionsPerPage)
           .map(question => {
-          const isSelected = selectedQuestions.some(q => q.id === question.id);
+          const isSelected = selectedQuestionsToSave.some(q => q.id === question.id);
           return (
             <div
               key={question.id}
@@ -239,22 +250,11 @@ export const QuestionSelector: React.FC<QuestionSelectorProps> = ({
                         ? 'bg-blue-100 text-blue-800 hover:bg-blue-200'
                         : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
                     }`}
-                    disabled={maxSelect ? selectedQuestions.length >= maxSelect && !isSelected : false}
+                    disabled={maxSelect ? selectedQuestionsToSave.length >= maxSelect && !isSelected : false}
                   >
                     {isSelected ? 'Selected' : 'Select'}
                   </button>
-                  {/* Replace Button */}
-                  {isSelected && (
-                      <button
-                        onClick={() => {
-                          setReplacingQuestionId(question.id);
-                          setIsReplaceModalOpen(true);
-                        }}
-                        className="px-3 py-1 rounded-md text-sm font-medium bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
-                      >
-                        Replace
-                      </button>
-                    )}
+                
                   <button
                     onClick={() => setExpandedQuestionId(
                       expandedQuestionId === question.id ? null : question.id
@@ -317,31 +317,7 @@ export const QuestionSelector: React.FC<QuestionSelectorProps> = ({
                 </div>
               )}
 
-              {/* {replacingQuestionId === question.id && (
-                <div className="mt-4">
-                  <h3 className="text-lg font-medium mb-2">Replace with:</h3>
-                  <div className="space-y-2">
-                    {filteredQuestions
-                      .filter(q => q.id !== question.id && !isQuestionUsedInQuiz(q.id)) // Exclude used questions
-                      .map(q => (
-                        <div
-                          key={q.id}
-                          className="flex justify-between items-center p-2 bg-gray-50 rounded-lg"
-                        >
-                          <div className="prose max-w-none">
-                            {renderMathContent(q.question_text)}
-                          </div>
-                          <button
-                            onClick={() => handleReplaceQuestion(question.id, q.id)}
-                            className="px-3 py-1 rounded-md text-sm font-medium bg-green-100 text-green-800 hover:bg-green-200"
-                          >
-                            Select
-                          </button>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              )} */}
+              
             </div>
           );
         })}

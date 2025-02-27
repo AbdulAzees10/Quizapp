@@ -37,7 +37,7 @@ export const QuizSelector: React.FC<QuestionSelectorProps> = ({
   const [replacingQuestionId, setReplacingQuestionId] = useState<string | null>(
     null
   );
-
+   
   // Save questionsPerPage preference to localStorage
   useEffect(() => {
     localStorage.setItem("questionsPerPage", questionsPerPage.toString());
@@ -125,7 +125,7 @@ export const QuizSelector: React.FC<QuestionSelectorProps> = ({
   const handleQuestionToggle = (question: Question) => {
     const isSelected = selectedQuestions.some((q) => q.id === question.id);
     if (isSelected) {
-      onSelect(selectedQuestions.filter((q) => q.id !== question.id));
+        onSelect(selectedQuestions.filter((q) => q.id !== question.id));
     } else {
       if (maxSelect && selectedQuestions.length >= maxSelect) {
         return;
@@ -226,6 +226,7 @@ export const QuizSelector: React.FC<QuestionSelectorProps> = ({
             setCurrentPage(1);
           }}
         />
+       
 
         {/* Questions */}
         {filteredQuestions

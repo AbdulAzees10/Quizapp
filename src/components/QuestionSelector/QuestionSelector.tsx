@@ -4,6 +4,7 @@ import { TagSelector } from '../TagSelector/TagSelector';
 import { PaginationControls } from '../PaginationControls/PaginationControls';
 import katex from 'katex';
 import { ReplaceQuestionModal } from "./ReplaceQuestionModal";
+import { useSelector } from 'react-redux';
 
 interface QuestionSelectorProps {
   questions: Question[];
@@ -33,6 +34,7 @@ export const QuestionSelector: React.FC<QuestionSelectorProps> = ({
   const [isReplaceModalOpen, setIsReplaceModalOpen] = useState(false);
   const [replacingQuestionId, setReplacingQuestionId] = useState<string | null>(null);
   const [selectedQuestionsToSave, setSelectedQuestionsToSave] = useState<Question[]>([]);
+
   // Save questionsPerPage preference to localStorage
   useEffect(() => {
     localStorage.setItem('questionsPerPage', questionsPerPage.toString());
@@ -102,13 +104,16 @@ export const QuestionSelector: React.FC<QuestionSelectorProps> = ({
 
   const handleQuestionToggle = (question: Question) => {
     const isSelected = selectedQuestionsToSave.some(q => q.id === question.id);
+    
     if (isSelected) {
-      setSelectedQuestionsToSave(selectedQuestionsToSave.filter(q => q.id !== question.id));
+        setSelectedQuestionsToSave(selectedQuestionsToSave.filter(q => q.id !== question.id));
+        onSelect(selectedQuestionsToSave);
     } else {
       if (maxSelect && selectedQuestionsToSave.length >= maxSelect) {
         return;
       }
       setSelectedQuestionsToSave([...selectedQuestionsToSave, question]);
+      
     }
   };
 
@@ -316,8 +321,6 @@ export const QuestionSelector: React.FC<QuestionSelectorProps> = ({
                   </div>
                 </div>
               )}
-
-              
             </div>
           );
         })}

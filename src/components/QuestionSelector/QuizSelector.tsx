@@ -4,8 +4,12 @@ import { TagSelector } from "../TagSelector/TagSelector";
 import { PaginationControls } from "../PaginationControls/PaginationControls";
 import katex from "katex";
 import { ReplaceQuestionModal } from "./ReplaceQuestionModal";
+import { useDispatch, useSelector } from 'react-redux';
+import { unselectQuestion } from '../../store/questionsSlice';
 
-interface QuestionSelectorProps {
+
+
+interface QuizSelectorProps {
   questions: Question[];
   tagSystem: TagSystem;
   selectedQuestions: Question[];
@@ -15,7 +19,9 @@ interface QuestionSelectorProps {
   onReplace: (questionId: string, newQuestionId: string) => void;
 }
 
-export const QuizSelector: React.FC<QuestionSelectorProps> = ({
+
+
+const QuizSelector: React.FC<QuizSelectorProps> = ({
   questions,
   tagSystem,
   selectedQuestions,
@@ -23,6 +29,13 @@ export const QuizSelector: React.FC<QuestionSelectorProps> = ({
   maxSelect,
   quizzes,
 }) => {
+  const dispatch = useDispatch();
+  const selectedQuestions = useSelector((state: any) => state.questions.selectedQuestions);
+
+  const handleQuestionToggle = (questionId: string) => {
+    dispatch(unselectQuestion(questionId)); // Unselect the question using Redux
+  };
+
   const [filters, setFilters] = useState<Partial<Tags>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedQuestionId, setExpandedQuestionId] = useState<string | null>(
@@ -122,17 +135,15 @@ export const QuizSelector: React.FC<QuestionSelectorProps> = ({
     });
   };
 
-  const handleQuestionToggle = (question: Question) => {
-    const isSelected = selectedQuestions.some((q) => q.id === question.id);
-    if (isSelected) {
-        onSelect(selectedQuestions.filter((q) => q.id !== question.id));
-    } else {
-      if (maxSelect && selectedQuestions.length >= maxSelect) {
-        return;
-      }
-      onSelect([...selectedQuestions, question]);
-    }
-  };
+  // const handleQuestionToggle = (question: Question) => {
+  //   console.log("Unselecting question:", question);
+  //   const index = selectedQuestions.findIndex((q) => q.id === question.id);
+    
+  //   if (index !== -1) {
+  //     selectedQuestions.splice(index, 1); // Remove the selected question
+  //     onSelect([...selectedQuestions]); // Update the selection in the parent
+  //   }
+  // };
 
   const handleReplaceQuestion = (newQuestionId: string) => {
     const newSelectedQuestions = selectedQuestions.map((q) =>
@@ -262,19 +273,10 @@ export const QuizSelector: React.FC<QuestionSelectorProps> = ({
                   </div>
                   <div className="flex space-x-2 ml-4">
                     <button
-                      onClick={() => handleQuestionToggle(question)}
-                      className={`px-3 py-1 rounded-md text-sm font-medium ${
-                        isSelected
-                          ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
-                          : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                      }`}
-                      disabled={
-                        maxSelect
-                          ? selectedQuestions.length >= maxSelect && !isSelected
-                          : false
-                      }
+                      onClick={() => handleQuestionToggle(question.id)}
+                      className={`px-3 py-1 rounded-md text-sm font-medium bg-gray-100 text-gray-800 hover:bg-gray-200`}
                     >
-                      {isSelected ? "Selected" : "Select"}
+                      Unselect
                     </button>
                     {/* Replace Button */}
                     {isSelected && (
@@ -383,3 +385,5 @@ export const QuizSelector: React.FC<QuestionSelectorProps> = ({
     </div>
   );
 };
+
+export default QuizSelector;

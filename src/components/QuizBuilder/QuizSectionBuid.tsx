@@ -1,0 +1,562 @@
+import React, { useState, useEffect, useMemo } from "react";
+import {
+  Question,
+  QuizSection,
+  QuestionTags,
+  TagSystem,
+  DifficultyLevel,
+  QuestionType,
+  AutoGenerateSettings,
+  Quiz,
+} from "../../types";
+import { QuestionSelector } from "../QuestionSelector/QuestionSelector";
+import {
+  generateSectionQuestions,
+  calculateDefaultMarks,
+  calculateDefaultNegativeMarks,
+} from "../../utils/quizGenerator";
+import { QuizSelector } from "../QuestionSelector/QuizSelector";
+
+interface QuizSectionBuilderProps {
+  section: QuizSection;
+  questions: Question[];
+  tagSystem: TagSystem;
+  onChange: (section: QuizSection) => void;
+  onDelete: () => void;
+  quizzes?: Quiz[]; // Keep this for displaying usage info
+}
+
+export const QuizSectionBuilder: React.FC<QuizSectionBuilderProps> = ({
+  section,
+  questions,
+  tagSystem,
+  onChange,
+  onDelete,
+  quizzes, // Keep this for displaying usage info
+}) => {
+  const [isAutoGenerate, setIsAutoGenerate] = useState(!!section.autoGenerate);
+  const [autoSettings, setAutoSettings] = useState<AutoGenerateSettings>(
+    section.autoGenerate || {
+      count: 10,
+      tags: {},
+      difficulty: [],
+      types: [],
+    }
+  );
+
+  const [duration, setDuration] = useState(section.duration || 0);
+
+  // Filter out questions used in other sections
+  const availableQuestions = useMemo(() => {
+    return questions;
+  }, [questions]);
+
+  // Update section when auto settings change
+  useEffect(() => {
+    if (isAutoGenerate) {
+      // Calculate total questions from chapter distribution
+      const totalFromChapters =
+        autoSettings.chapterDistribution?.reduce(
+          (sum, chapter) => sum + chapter.count,
+          0
+        ) || 0;
+
+      // If using chapter distribution, use that count instead of general count
+      const effectiveCount =
+        autoSettings.subject && totalFromChapters > 0
+          ? totalFromChapters
+          : autoSettings.count;
+
+      const generatedQuestions = generateSectionQuestions({
+        count: effectiveCount,
+        questions: availableQuestions,
+        tags: autoSettings.tags,
+        difficulty: autoSettings.difficulty,
+        types: autoSettings.types,
+        subject: autoSettings.subject,
+        chapterDistribution: autoSettings.chapterDistribution,
+      });
+
+      // Compare current and new questions to prevent unnecessary updates
+      const currentQuestionIds = section.questions
+        .map((q) => q.id)
+        .sort()
+        .join(",");
+      const newQuestionIds = generatedQuestions
+        .map((q) => q.id)
+        .sort()
+        .join(",");
+
+      // Only update if the questions have actually changed
+      if (currentQuestionIds !== newQuestionIds) {
+        onChange({
+          ...section,
+          questions: generatedQuestions,
+          autoGenerate: autoSettings,
+        });
+      }
+    }
+  }, [isAutoGenerate, autoSettings, availableQuestions]);
+
+  const handleManualQuestionSelect = (selectedQuestions: Question[]) => {
+    onChange({
+      ...section,
+      questions: selectedQuestions,
+      autoGenerate: undefined,
+    });
+  };
+
+  const handleAutoSettingsChange = <T extends keyof AutoGenerateSettings>(
+    field: T,
+    value: AutoGenerateSettings[T]
+  ) => {
+    setAutoSettings((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  return (
+    <div className="bg-white shadow-sm rounded-lg p-6 space-y-6">
+      {/* Section Header */}
+      <div className="flex justify-between items-center">
+        <div className="flex-1 space-y-4">
+          <input
+            type="text"
+            value={section.name}
+            onChange={(e) => onChange({ ...section, name: e.target.value })}
+            placeholder="Section Name"
+            className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+          />
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <div className="flex items-center mb-2">
+                <input
+                  type="checkbox"
+                  id={`timer-${section.id}`}
+                  checked={section.timerEnabled}
+                  onChange={(e) => {
+                    const timerEnabled = e.target.checked;
+                    const newDuration = timerEnabled ? duration || 60 : 0;
+                    setDuration(newDuration);
+                    onChange({
+                      ...section,
+                      timerEnabled,
+                      duration: timerEnabled ? newDuration : undefined,
+                    });
+                  }}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label
+                  htmlFor={`timer-${section.id}`}
+                  className="ml-2 block text-sm font-medium text-gray-700"
+                >
+                  Enable Section Timing
+                </label>
+              </div>
+              <div
+                className={
+                  section.timerEnabled ? "" : "opacity-50 pointer-events-none"
+                }
+              >
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Duration (minutes)
+                </label>
+                <input
+                  type="number"
+                  value={duration}
+                  onChange={(e) => {
+                    const newDuration = parseInt(e.target.value) || 0;
+                    setDuration(newDuration);
+                    if (section.timerEnabled) {
+                      onChange({ ...section, duration: newDuration });
+                    }
+                  }}
+                  min="0"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Marks per Question
+              </label>
+              <input
+                type="number"
+                value={section.marks}
+                onChange={(e) =>
+                  onChange({
+                    ...section,
+                    marks: parseFloat(e.target.value) || 0,
+                  })
+                }
+                min="0"
+                step="0.5"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Negative Marks
+              </label>
+              <input
+                type="number"
+                value={section.negativeMarks}
+                onChange={(e) =>
+                  onChange({
+                    ...section,
+                    negativeMarks: parseFloat(e.target.value) || 0,
+                  })
+                }
+                min="0"
+                step="0.25"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          </div>
+        </div>
+        <button
+          onClick={onDelete}
+          className="ml-4 text-red-600 hover:text-red-800"
+        >
+          Delete Section
+        </button>
+      </div>
+
+      {/* Question Selection Mode */}
+      <div className="border-t pt-6">
+        <div className="flex items-center space-x-4 mb-6">
+          <button
+            onClick={() => setIsAutoGenerate(false)}
+            className={`px-4 py-2 rounded-md text-sm font-medium ${
+              !isAutoGenerate
+                ? "bg-blue-100 text-blue-800"
+                : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+            }`}
+          >
+            Manual Selection
+          </button>
+          {/* <button
+            onClick={() => setIsAutoGenerate(true)}
+            className={`px-4 py-2 rounded-md text-sm font-medium ${
+              isAutoGenerate
+                ? 'bg-blue-100 text-blue-800'
+                : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+            }`}
+          >
+            Auto Generator
+          </button> */}
+        </div>
+
+        {isAutoGenerate ? (
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Number of Questions
+              </label>
+              <input
+                type="number"
+                value={autoSettings.count}
+                onChange={(e) =>
+                  handleAutoSettingsChange(
+                    "count",
+                    parseInt(e.target.value) || 0
+                  )
+                }
+                min="1"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Difficulty Levels
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {tagSystem.difficulty_levels.map((level) => (
+                  <button
+                    key={level}
+                    onClick={() => {
+                      const difficulty = autoSettings.difficulty || [];
+                      const newDifficulty = difficulty.includes(level)
+                        ? difficulty.filter((d: DifficultyLevel) => d !== level)
+                        : [...difficulty, level];
+                      handleAutoSettingsChange("difficulty", newDifficulty);
+                    }}
+                    className={`px-3 py-1 rounded-md text-sm font-medium ${
+                      autoSettings.difficulty?.includes(level)
+                        ? "bg-blue-100 text-blue-800"
+                        : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                    }`}
+                  >
+                    {level}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Question Types
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {tagSystem.question_types.map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => {
+                      const types = autoSettings.types || [];
+                      const newTypes = types.includes(type)
+                        ? types.filter((t: QuestionType) => t !== type)
+                        : [...types, type];
+                      handleAutoSettingsChange("types", newTypes);
+                    }}
+                    className={`px-3 py-1 rounded-md text-sm font-medium ${
+                      autoSettings.types?.includes(type)
+                        ? "bg-blue-100 text-blue-800"
+                        : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                    }`}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Subject
+                </label>
+                <select
+                  value={autoSettings.subject || ""}
+                  onChange={(e) => {
+                    const subject = e.target.value;
+                    handleAutoSettingsChange("subject", subject);
+                    // Reset chapter distribution when subject changes
+                    handleAutoSettingsChange("chapterDistribution", []);
+                  }}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Select Subject</option>
+                  {Object.keys(tagSystem.subjects).map((subject) => (
+                    <option key={subject} value={subject}>
+                      {subject}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {autoSettings.subject &&
+                tagSystem.chapters &&
+                tagSystem.chapters[autoSettings.subject] && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Chapter Distribution
+                    </label>
+                    <div className="space-y-4">
+                      {tagSystem.chapters[autoSettings.subject].map(
+                        (chapter) => {
+                          const chapterDist =
+                            autoSettings.chapterDistribution?.find(
+                              (d) => d.chapter === chapter
+                            );
+                          return (
+                            <div
+                              key={chapter}
+                              className="border rounded-md p-4"
+                            >
+                              <div className="flex items-center gap-4 mb-2">
+                                <span className="font-medium">{chapter}</span>
+                                <input
+                                  type="number"
+                                  value={chapterDist?.count || 0}
+                                  onChange={(e) => {
+                                    const count = parseInt(e.target.value) || 0;
+                                    const newDist = [
+                                      ...(autoSettings.chapterDistribution ||
+                                        []),
+                                    ];
+                                    const index = newDist.findIndex(
+                                      (d) => d.chapter === chapter
+                                    );
+                                    if (index >= 0) {
+                                      newDist[index] = {
+                                        ...newDist[index],
+                                        count,
+                                      };
+                                    } else {
+                                      newDist.push({
+                                        chapter,
+                                        count,
+                                        topics: [],
+                                      });
+                                    }
+                                    handleAutoSettingsChange(
+                                      "chapterDistribution",
+                                      newDist
+                                    );
+                                  }}
+                                  min="0"
+                                  className="w-24 px-2 py-1 border border-gray-300 rounded-md"
+                                />
+                                <span className="text-sm text-gray-500">
+                                  questions
+                                </span>
+                              </div>
+
+                              {chapterDist &&
+                                chapterDist.count > 0 &&
+                                tagSystem.topics &&
+                                tagSystem.topics[chapter] && (
+                                  <div className="ml-4 border-l pl-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                      Topic Distribution (Optional)
+                                    </label>
+                                    <div className="space-y-2">
+                                      {tagSystem.topics[chapter].map(
+                                        (topic) => {
+                                          const topicDist =
+                                            chapterDist?.topics?.find(
+                                              (t) => t.topic === topic
+                                            );
+                                          return (
+                                            <div
+                                              key={topic}
+                                              className="flex items-center gap-4"
+                                            >
+                                              <span className="text-sm">
+                                                {topic}
+                                              </span>
+                                              <input
+                                                type="number"
+                                                value={topicDist?.count || 0}
+                                                onChange={(e) => {
+                                                  const count =
+                                                    parseInt(e.target.value) ||
+                                                    0;
+                                                  const newDist = [
+                                                    ...(autoSettings.chapterDistribution ||
+                                                      []),
+                                                  ];
+                                                  const chapterIndex =
+                                                    newDist.findIndex(
+                                                      (d) =>
+                                                        d.chapter === chapter
+                                                    );
+                                                  if (chapterIndex >= 0) {
+                                                    const topics = [
+                                                      ...newDist[chapterIndex]
+                                                        .topics,
+                                                    ];
+                                                    const topicIndex =
+                                                      topics.findIndex(
+                                                        (t) => t.topic === topic
+                                                      );
+                                                    if (topicIndex >= 0) {
+                                                      topics[topicIndex] = {
+                                                        topic,
+                                                        count,
+                                                      };
+                                                    } else {
+                                                      topics.push({
+                                                        topic,
+                                                        count,
+                                                      });
+                                                    }
+                                                    newDist[chapterIndex] = {
+                                                      ...newDist[chapterIndex],
+                                                      topics,
+                                                    };
+                                                    handleAutoSettingsChange(
+                                                      "chapterDistribution",
+                                                      newDist
+                                                    );
+                                                  }
+                                                }}
+                                                min="0"
+                                                max={chapterDist?.count || 0}
+                                                className="w-20 px-2 py-1 border border-gray-300 rounded-md"
+                                              />
+                                            </div>
+                                          );
+                                        }
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                            </div>
+                          );
+                        }
+                      )}
+                    </div>
+                  </div>
+                )}
+            </div>
+          </div>
+        ) : (
+          <QuestionSelector
+            questions={availableQuestions}
+            tagSystem={tagSystem}
+            selectedQuestions={section.questions}
+            onSelect={handleManualQuestionSelect}
+            quizzes={quizzes} // Pass quizzes prop
+          />
+        )}
+      </div>
+
+      {/* Selected Questions Summary */}
+      <div className="border-t pt-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">
+          Selected Questions ({section.questions.length})
+        </h3>
+        <div className="space-y-2">
+          <p className="text-sm text-gray-600">
+            Total Marks: {section.questions.length * section.marks}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(
+              section.questions.reduce((acc, q) => {
+                const type = q.tags.question_type;
+                acc[type] = (acc[type] || 0) + 1;
+                return acc;
+              }, {} as Record<QuestionType, number>)
+            ).map(([type, count]) => (
+              <span
+                key={type}
+                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+              >
+                {type}: {count}
+              </span>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(
+              section.questions.reduce((acc, q) => {
+                const level = q.tags.difficulty_level;
+                acc[level] = (acc[level] || 0) + 1;
+                return acc;
+              }, {} as Record<DifficultyLevel, number>)
+            ).map(([level, count]) => (
+              <span
+                key={level}
+                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+              >
+                {level}: {count}
+              </span>
+            ))}
+          </div>
+        </div>
+        <div className="border-t pt-6">
+         
+            <QuizSelector 
+            questions={availableQuestions}
+            tagSystem={tagSystem}
+            selectedQuestions={section.questions}
+            onSelect={handleManualQuestionSelect}
+            quizzes={quizzes} // Pass quizzes prop
+          />
+        </div>
+      </div>
+    </div>
+  );
+};

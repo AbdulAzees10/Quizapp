@@ -206,6 +206,7 @@ export const QuestionSelector: React.FC<QuestionSelectorProps> = ({
 
         {/* Questions */}
         {filteredQuestions
+          .filter((question) => !selectedQuestions.some((q) => q.id === question.id))
           .slice((currentPage - 1) * questionsPerPage, currentPage * questionsPerPage)
           .map(question => {
           const isSelected = selectedQuestions.some(q => q.id === question.id);

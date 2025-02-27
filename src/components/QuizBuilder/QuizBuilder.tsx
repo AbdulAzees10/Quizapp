@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Quiz, Question, TagSystem, QuizSection } from "../../types";
-import { QuizSectionBuilder } from "./QuizSectionBuilder";
+import { QuizSectionBuilder } from "./QuizSectionBuid";
 import { QuizGeneratorWizard } from "./QuizGeneratorWizard";
 import { QuizPreview } from "../QuizPreview/QuizPreview";
 import { Modal } from "./Modal";

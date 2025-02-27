@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Quiz, Question, TagSystem, QuizSection } from '../../types';
-import { QuizSectionBuilder } from '../QuizSectionBuilder/QuizSectionBuilder';
-import { QuizGeneratorWizard } from './QuizGeneratorWizard';
-import { QuizPreview } from '../QuizPreview/QuizPreview';
-import { Modal } from './Modal';
-import { toast } from 'react-hot-toast';
+import React, { useState, useEffect, useMemo } from "react";
+import { Quiz, Question, TagSystem, QuizSection } from "../../types";
+import { QuizSectionBuilder } from "./QuizSectionBuilder";
+import { QuizGeneratorWizard } from "./QuizGeneratorWizard";
+import { QuizPreview } from "../QuizPreview/QuizPreview";
+import { Modal } from "./Modal";
+import { toast } from "react-hot-toast";
+
 
 interface QuizBuilderProps {
   questions: Question[];
@@ -24,16 +25,16 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
   // Helper to get used questions across all sections except the current section
   const getUsedQuestions = (currentSectionId: string) => {
     const usedQuestionIds = new Set<string>();
-    
+
     // Get all questions used in other sections of this quiz
-    quiz.sections.forEach(section => {
+    quiz.sections.forEach((section) => {
       if (section.id !== currentSectionId) {
-        section.questions.forEach(question => {
+        section.questions.forEach((question) => {
           usedQuestionIds.add(question.id);
         });
       }
     });
-    
+
     return usedQuestionIds;
   };
 
@@ -41,32 +42,38 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
   const getAvailableQuestions = (currentSectionId: string) => {
     const usedQuestions = getUsedQuestions(currentSectionId);
     // Return only questions that haven't been used in other sections
-    return questions.filter(question => !usedQuestions.has(question.id));
+    return questions.filter((question) => !usedQuestions.has(question.id));
   };
 
-  const [quiz, setQuiz] = useState<Quiz>(() => initialQuiz || {
-    id: crypto.randomUUID(),
-    title: '',
-    header: [],
-    instructions: [],
-    footer: [],
-    sections: [],
-    totalDuration: 0,
-    totalMarks: 0,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    watermark: {
-      enabled: true,
-      text: "PROF. P.C. THOMAS CLASSES & CHAITHANYA CLASSES"
-    }
-  });
+  const [quiz, setQuiz] = useState<Quiz>(
+    () =>
+      initialQuiz || {
+        id: crypto.randomUUID(),
+        title: "",
+        header: [],
+        instructions: [],
+        footer: [],
+        sections: [],
+        totalDuration: 0,
+        totalMarks: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        watermark: {
+          enabled: true,
+          text: "PROF. P.C. THOMAS CLASSES & CHAITHANYA CLASSES",
+        },
+      }
+  );
 
-  const [newHeader, setNewHeader] = useState('');
-  const [newInstruction, setNewInstruction] = useState('');
-  const [newFooter, setNewFooter] = useState('');
+  const [newHeader, setNewHeader] = useState("");
+  const [newInstruction, setNewInstruction] = useState("");
+  const [newFooter, setNewFooter] = useState("");
   const [showGeneratorWizard, setShowGeneratorWizard] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [newSection, setNewSection] = useState<QuizSection | null>(null);
+  const [isAddSectionModalOpen, setIsAddSectionModalOpen] = useState(false);
+
 
   // Calculate totals whenever sections change
   useEffect(() => {
@@ -77,29 +84,31 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
 
     // Only update marks, not duration
     if (totalMarks !== quiz.totalMarks) {
-      setQuiz(prev => ({
+      setQuiz((prev) => ({
         ...prev,
         totalMarks,
         updatedAt: new Date().toISOString(),
       }));
     }
-  }, [quiz.sections.map(section => ({
-    marks: section.marks,
-    questionCount: section.questions.length
-  }))]);
+  }, [
+    quiz.sections.map((section) => ({
+      marks: section.marks,
+      questionCount: section.questions.length,
+    })),
+  ]);
 
   const handleAddHeader = () => {
     if (newHeader.trim()) {
-      setQuiz(prev => ({
+      setQuiz((prev) => ({
         ...prev,
         header: [...(prev.header || []), newHeader.trim()],
       }));
-      setNewHeader('');
+      setNewHeader("");
     }
   };
 
   const handleRemoveHeader = (index: number) => {
-    setQuiz(prev => ({
+    setQuiz((prev) => ({
       ...prev,
       header: prev.header?.filter((_, i) => i !== index) || [],
     }));
@@ -107,16 +116,16 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
 
   const handleAddInstruction = () => {
     if (newInstruction.trim()) {
-      setQuiz(prev => ({
+      setQuiz((prev) => ({
         ...prev,
         instructions: [...(prev.instructions || []), newInstruction.trim()],
       }));
-      setNewInstruction('');
+      setNewInstruction("");
     }
   };
 
   const handleRemoveInstruction = (index: number) => {
-    setQuiz(prev => ({
+    setQuiz((prev) => ({
       ...prev,
       instructions: prev.instructions?.filter((_, i) => i !== index) || [],
     }));
@@ -124,39 +133,39 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
 
   const handleAddFooter = () => {
     if (newFooter.trim()) {
-      setQuiz(prev => ({
+      setQuiz((prev) => ({
         ...prev,
         footer: [...(prev.footer || []), newFooter.trim()],
       }));
-      setNewFooter('');
+      setNewFooter("");
     }
   };
 
   const handleRemoveFooter = (index: number) => {
-    setQuiz(prev => ({
+    setQuiz((prev) => ({
       ...prev,
       footer: prev.footer?.filter((_, i) => i !== index) || [],
     }));
   };
 
   const handleGeneratedSections = (sections: QuizSection[]) => {
-    setQuiz(prev => ({
+    setQuiz((prev) => ({
       ...prev,
-      sections: [...prev.sections, ...sections]
+      sections: [...prev.sections, ...sections],
     }));
     setShowGeneratorWizard(false);
   };
 
   const handleSave = async () => {
     // Validate title
-    if (!quiz.title || quiz.title.trim() === '') {
-      toast.error('Please enter a quiz title');
+    if (!quiz.title || quiz.title.trim() === "") {
+      toast.error("Please enter a quiz title");
       return;
     }
 
     // Validate sections
     if (quiz.sections.length === 0) {
-      toast.error('Please add at least one section');
+      toast.error("Please add at least one section");
       return;
     }
 
@@ -164,13 +173,13 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
     try {
       const updatedQuiz = {
         ...quiz,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
 
       // Update questions to track quiz usage
-      const updatedQuestions = questions.map(q => {
-        const isUsedInThisQuiz = quiz.sections.some(section =>
-          section.questions.some(sq => sq.id === q.id)
+      const updatedQuestions = questions.map((q) => {
+        const isUsedInThisQuiz = quiz.sections.some((section) =>
+          section.questions.some((sq) => sq.id === q.id)
         );
 
         if (isUsedInThisQuiz) {
@@ -178,20 +187,28 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
           usedInQuizzes.add(quiz.id);
           return {
             ...q,
-            usedInQuizzes: Array.from(usedInQuizzes)
+            usedInQuizzes: Array.from(usedInQuizzes),
           };
         }
         return q;
       });
 
       await onSave(updatedQuiz, updatedQuestions);
-      toast.success('Quiz saved successfully!');
+      toast.success("Quiz saved successfully!");
     } catch (error) {
-      toast.error('Failed to save quiz');
-      console.error('Save error:', error);
+      toast.error("Failed to save quiz");
+      console.error("Save error:", error);
     } finally {
       setIsSaving(false);
     }
+  };
+  // Function to handle adding a new section
+  const handleAddSection = (section: QuizSection) => {
+    setQuiz((prev) => ({
+      ...prev,
+      sections: [...prev.sections, section],
+    }));
+    setIsAddSectionModalOpen(false); // Close the modal
   };
 
   return (
@@ -199,14 +216,19 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
       <div className="space-y-6">
         {/* Title */}
         <div>
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="title"
+            className="block text-sm font-medium text-gray-700"
+          >
             Quiz Title
           </label>
           <input
             type="text"
             id="title"
             value={quiz.title}
-            onChange={(e) => setQuiz(prev => ({ ...prev, title: e.target.value }))}
+            onChange={(e) =>
+              setQuiz((prev) => ({ ...prev, title: e.target.value }))
+            }
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
           />
         </div>
@@ -237,7 +259,7 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
                 placeholder="Add a header note..."
                 className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                 onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
+                  if (e.key === "Enter") {
                     handleAddHeader();
                   }
                 }}
@@ -254,17 +276,22 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
 
         {/* Duration */}
         <div>
-          <label htmlFor="duration" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="duration"
+            className="block text-sm font-medium text-gray-700"
+          >
             Total Duration (minutes)
           </label>
           <input
             type="number"
             id="duration"
             value={quiz.totalDuration}
-            onChange={(e) => setQuiz(prev => ({ 
-              ...prev, 
-              totalDuration: parseInt(e.target.value) || 0 
-            }))}
+            onChange={(e) =>
+              setQuiz((prev) => ({
+                ...prev,
+                totalDuration: parseInt(e.target.value) || 0,
+              }))
+            }
             min="0"
             className="mt-1 block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
           />
@@ -296,7 +323,7 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
                 placeholder="Add an instruction..."
                 className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                 onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
+                  if (e.key === "Enter") {
                     handleAddInstruction();
                   }
                 }}
@@ -337,7 +364,7 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
                 placeholder="Add a footer note..."
                 className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                 onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
+                  if (e.key === "Enter") {
                     handleAddFooter();
                   }
                 }}
@@ -354,23 +381,30 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
 
         {/* Watermark Settings */}
         <div className="space-y-4">
-          <label className="block text-sm font-medium text-gray-700">Watermark Settings</label>
+          <label className="block text-sm font-medium text-gray-700">
+            Watermark Settings
+          </label>
           <div className="flex items-center gap-4">
             <div className="flex items-center">
               <input
                 type="checkbox"
                 id="watermarkEnabled"
                 checked={quiz.watermark?.enabled}
-                onChange={(e) => setQuiz(prev => ({
-                  ...prev,
-                  watermark: {
-                    ...prev.watermark,
-                    enabled: e.target.checked
-                  }
-                }))}
+                onChange={(e) =>
+                  setQuiz((prev) => ({
+                    ...prev,
+                    watermark: {
+                      ...prev.watermark,
+                      enabled: e.target.checked,
+                    },
+                  }))
+                }
                 className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
-              <label htmlFor="watermarkEnabled" className="ml-2 text-sm text-gray-700">
+              <label
+                htmlFor="watermarkEnabled"
+                className="ml-2 text-sm text-gray-700"
+              >
                 Enable Watermark
               </label>
             </div>
@@ -378,14 +412,16 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
               <div className="flex-1">
                 <input
                   type="text"
-                  value={quiz.watermark?.text || ''}
-                  onChange={(e) => setQuiz(prev => ({
-                    ...prev,
-                    watermark: {
-                      ...prev.watermark,
-                      text: e.target.value
-                    }
-                  }))}
+                  value={quiz.watermark?.text || ""}
+                  onChange={(e) =>
+                    setQuiz((prev) => ({
+                      ...prev,
+                      watermark: {
+                        ...prev.watermark,
+                        text: e.target.value,
+                      },
+                    }))
+                  }
                   placeholder="Enter watermark text..."
                   className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                 />
@@ -405,7 +441,7 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
               >
                 Auto Generate
               </button>
-              <button
+              {/* <button
                 onClick={() =>
                   setQuiz(prev => ({
                     ...prev,
@@ -425,9 +461,40 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
                 className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700"
               >
                 Add Section
+              </button> */}
+              {/* Add Section Button */}
+              <button
+                onClick={() => {
+                  setNewSection({
+                    id: crypto.randomUUID(),
+                    name: `Section ${quiz.sections.length + 1}`,
+                    timerEnabled: false,
+                    marks: 1,
+                    negativeMarks: 0,
+                    questions: [],
+                  });
+                  setIsAddSectionModalOpen(true);
+                }}
+                className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700"
+              >
+                Add Section
               </button>
             </div>
           </div>
+
+          {/* Modal for Adding a New Section */}
+          { newSection && (
+            <QuizSectionBuilder
+              section={newSection}
+              questions={getAvailableQuestions(newSection.id)}
+              tagSystem={tagSystem}
+              usedQuestions={getUsedQuestions(newSection.id)}
+              onChange={(updatedSection) => {
+                handleAddSection(updatedSection);
+              }}
+              onDelete={() => setIsAddSectionModalOpen(false)} // Close modal on delete
+            />
+          )}
 
           {quiz.sections.map((section, index) => (
             <QuizSectionBuilder
@@ -438,19 +505,24 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
               usedQuestions={new Set<string>()}
               quizzes={quizzes}
               onChange={(updatedSection) =>
-                setQuiz(prev => ({
+                setQuiz((prev) => ({
                   ...prev,
                   sections: prev.sections.map((s) =>
                     s.id === updatedSection.id ? updatedSection : s
                   ),
                 }))
               }
-              onDelete={() =>
-                setQuiz(prev => ({
-                  ...prev,
-                  sections: prev.sections.filter((s) => s.id !== section.id),
-                }))
-              }
+              onDelete={() => {
+                console.log("Deleting section with id:", section.id);
+                setQuiz((prev) => {
+                  const updatedSections = prev.sections.filter((s) => s.id !== section.id);
+                  console.log("Updated sections:", updatedSections);
+                  return {
+                    ...prev,
+                    sections: updatedSections,
+                  };
+                });
+              }}
             />
           ))}
         </div>
@@ -462,8 +534,11 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
             <div>Total Duration: {quiz.totalDuration} minutes</div>
             <div>Total Marks: {quiz.totalMarks}</div>
             <div>
-              Total Questions:{' '}
-              {quiz.sections.reduce((sum, section) => sum + section.questions.length, 0)}
+              Total Questions:{" "}
+              {quiz.sections.reduce(
+                (sum, section) => sum + section.questions.length,
+                0
+              )}
             </div>
           </div>
         </div>
@@ -480,35 +555,32 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
             onClick={handleSave}
             disabled={isSaving}
             className={`px-4 py-2 text-white text-sm font-medium rounded-md ${
-              isSaving 
-                ? 'bg-gray-400 cursor-not-allowed' 
-                : 'bg-blue-600 hover:bg-blue-700'
+              isSaving
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-blue-600 hover:bg-blue-700"
             }`}
           >
-            {isSaving ? 'Saving...' : 'Save Quiz'}
+            {isSaving ? "Saving..." : "Save Quiz"}
           </button>
         </div>
       </div>
 
       {/* Quiz Generator Wizard Modal */}
       {showGeneratorWizard && (
-        <Modal onClose={() => setShowGeneratorWizard(false)}>
+        <SectionModal onClose={() => setShowGeneratorWizard(false)}>
           <QuizGeneratorWizard
-            questions={questions}
+            questions={questions || []}
             tagSystem={tagSystem}
             onGenerate={handleGeneratedSections}
             onCancel={() => setShowGeneratorWizard(false)}
-            usedQuestions={getUsedQuestions('')}
+            usedQuestions={getUsedQuestions("")}
           />
-        </Modal>
+        </SectionModal>
       )}
 
       {/* Quiz Preview Modal */}
       {showPreview && (
-        <QuizPreview
-          quiz={quiz}
-          onClose={() => setShowPreview(false)}
-        />
+        <QuizPreview quiz={quiz} onClose={() => setShowPreview(false)} />
       )}
     </div>
   );

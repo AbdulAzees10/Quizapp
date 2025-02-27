@@ -3,6 +3,7 @@ import { Question, Tags, TagSystem, Quiz } from '../../types';
 import { TagSelector } from '../TagSelector/TagSelector';
 import { PaginationControls } from '../PaginationControls/PaginationControls';
 import katex from 'katex';
+import { ReplaceQuestionModal } from "./ReplaceQuestionModal";
 
 interface QuestionSelectorProps {
   questions: Question[];
@@ -29,6 +30,8 @@ export const QuestionSelector: React.FC<QuestionSelectorProps> = ({
     const saved = localStorage.getItem('questionsPerPage');
     return saved ? parseInt(saved, 10) : 10;
   });
+  const [isReplaceModalOpen, setIsReplaceModalOpen] = useState(false);
+  const [replacingQuestionId, setReplacingQuestionId] = useState<string | null>(null);
 
   // Save questionsPerPage preference to localStorage
   useEffect(() => {
@@ -42,7 +45,7 @@ export const QuestionSelector: React.FC<QuestionSelectorProps> = ({
 
   // Filter and search questions
   const filteredQuestions = useMemo(() => {
-    return questions.filter(question => {
+    return questions?.filter(question => {
       // Apply tag filters
       const matchesFilters = Object.entries(filters).every(([key, value]) => {
         if (!value) return true;
@@ -109,10 +112,27 @@ export const QuestionSelector: React.FC<QuestionSelectorProps> = ({
     }
   };
 
+  const handleReplaceQuestion = (newQuestionId: string) => {
+    const newSelectedQuestions = selectedQuestions.map((q) =>
+      q.id === replacingQuestionId ? questions.find((question) => question.id === newQuestionId)! : q
+    );
+    onSelect(newSelectedQuestions);
+    setReplacingQuestionId(null);
+    setIsReplaceModalOpen(false);
+  };
+
   const getQuizUsage = (questionId: string) => {
-    return quizzes.filter(quiz =>
-      quiz.sections.some(section =>
-        section.questions.some(q => q.id === questionId)
+    return quizzes?.filter(quiz =>
+      quiz.sections?.some(section =>
+        section.questions?.some(q => q.id === questionId)
+      )
+    );
+  };
+
+  const isQuestionUsedInQuiz = (questionId: string) => {
+    return quizzes?.some(quiz =>
+      quiz.sections?.some(section =>
+        section.questions?.some(q => q.id === questionId)
       )
     );
   };
@@ -122,7 +142,7 @@ export const QuestionSelector: React.FC<QuestionSelectorProps> = ({
 
     return (
       <div className="flex flex-wrap gap-2 mt-2">
-        {Object.entries(tags).map(([key, value]) => (
+        {Object?.entries(tags)?.map(([key, value]) => (
           value && (
             <span
               key={key}
@@ -132,7 +152,7 @@ export const QuestionSelector: React.FC<QuestionSelectorProps> = ({
             </span>
           )
         ))}
-        {usedInQuizzes.length > 0 && (
+        {usedInQuizzes?.length > 0 && (
           <span
             className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"
           >
@@ -222,6 +242,18 @@ export const QuestionSelector: React.FC<QuestionSelectorProps> = ({
                   >
                     {isSelected ? 'Selected' : 'Select'}
                   </button>
+                  {/* Replace Button */}
+                  {isSelected && (
+                      <button
+                        onClick={() => {
+                          setReplacingQuestionId(question.id);
+                          setIsReplaceModalOpen(true);
+                        }}
+                        className="px-3 py-1 rounded-md text-sm font-medium bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+                      >
+                        Replace
+                      </button>
+                    )}
                   <button
                     onClick={() => setExpandedQuestionId(
                       expandedQuestionId === question.id ? null : question.id
@@ -283,6 +315,32 @@ export const QuestionSelector: React.FC<QuestionSelectorProps> = ({
                   </div>
                 </div>
               )}
+
+              {/* {replacingQuestionId === question.id && (
+                <div className="mt-4">
+                  <h3 className="text-lg font-medium mb-2">Replace with:</h3>
+                  <div className="space-y-2">
+                    {filteredQuestions
+                      .filter(q => q.id !== question.id && !isQuestionUsedInQuiz(q.id)) // Exclude used questions
+                      .map(q => (
+                        <div
+                          key={q.id}
+                          className="flex justify-between items-center p-2 bg-gray-50 rounded-lg"
+                        >
+                          <div className="prose max-w-none">
+                            {renderMathContent(q.question_text)}
+                          </div>
+                          <button
+                            onClick={() => handleReplaceQuestion(question.id, q.id)}
+                            className="px-3 py-1 rounded-md text-sm font-medium bg-green-100 text-green-800 hover:bg-green-200"
+                          >
+                            Select
+                          </button>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )} */}
             </div>
           );
         })}
@@ -297,6 +355,15 @@ export const QuestionSelector: React.FC<QuestionSelectorProps> = ({
           </div>
         )}
       </div>
+       {/* Replace Modal */}
+       <ReplaceQuestionModal
+        isOpen={isReplaceModalOpen}
+        onClose={() => setIsReplaceModalOpen(false)}
+        questions={questions}
+        tagSystem={tagSystem}
+        quizzes={quizzes}
+        onReplace={handleReplaceQuestion}
+      />
     </div>
   );
 };

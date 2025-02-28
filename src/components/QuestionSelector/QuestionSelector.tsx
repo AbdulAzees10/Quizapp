@@ -12,6 +12,7 @@ interface QuestionSelectorProps {
   onSelect: (questions: Question[]) => void;
   maxSelect?: number;
   quizzes: Quiz[];
+  section?: QuizSection; // Add this prop
 }
 
 export const QuestionSelector: React.FC<QuestionSelectorProps> = ({
@@ -21,6 +22,7 @@ export const QuestionSelector: React.FC<QuestionSelectorProps> = ({
   onSelect,
   maxSelect,
   quizzes,
+  section
 }) => {
   const [filters, setFilters] = useState<Partial<Tags>>({});
   const [searchQuery, setSearchQuery] = useState('');
@@ -33,6 +35,7 @@ export const QuestionSelector: React.FC<QuestionSelectorProps> = ({
   const [isReplaceModalOpen, setIsReplaceModalOpen] = useState(false);
   const [replacingQuestionId, setReplacingQuestionId] = useState<string | null>(null);
   const [selectedQuestionsToSave, setSelectedQuestionsToSave] = useState<Question[]>([]);
+  const [error, setError] = useState<string>("");
   // Save questionsPerPage preference to localStorage
   useEffect(() => {
     localStorage.setItem('questionsPerPage', questionsPerPage.toString());
@@ -113,8 +116,13 @@ export const QuestionSelector: React.FC<QuestionSelectorProps> = ({
   };
 
   const handleSaveSection = () => {
-    onSelect(selectedQuestionsToSave);
-    setSelectedQuestionsToSave([]); // Clear the selection after saving
+    if(section?.TotalQuestion && selectedQuestionsToSave.length !== section.TotalQuestion){
+      setError(`Please select exactly ${section.TotalQuestion} questions. Currently selected: ${selectedQuestionsToSave.length}`);
+      return false;
+    }
+    setError("");
+    return true;
+    
   };
 
   const handleReplaceQuestion = (newQuestionId: string) => {
@@ -208,12 +216,37 @@ export const QuestionSelector: React.FC<QuestionSelectorProps> = ({
             setCurrentPage(1);
           }}
         />
-        <button
+        {/* <button
           onClick={handleSaveSection}
           className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
         >
           Save Section
+        </button> */}
+        <div>
+      {error && (
+        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
+          {error}
+        </div>
+      )}
+      {/* Existing QuestionSelector content */}
+      <div className="mt-4">
+        <button
+          onClick={() => {
+            if (handleSaveSection()) {
+              // Proceed with saving
+              onSelect(selectedQuestionsToSave);
+            }
+          }}
+          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+        >
+          Save Section
         </button>
+      </div>
+    </div>
+
+{/* 
+        onSelect(selectedQuestionsToSave);
+    setSelectedQuestionsToSave([]); // Clear the selection after saving */}
 
         {/* Questions */}
         {filteredQuestions

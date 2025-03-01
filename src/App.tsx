@@ -6,12 +6,15 @@ import Dashboard from './pages/Dashboard';
 import Home from './pages/Home';
 import SignIn from './pages/SignIn';
 import SignUp from './pages/SignUp';
+import store from './store/store';
+import { Provider } from 'react-redux';
 
 export default function App() {
   // You might want to add authentication state here later
   const isAuthenticated = true;
 
   return (
+    <Provider store={store}>
     <BrowserRouter>
       <Toaster position="top-right" />
       <Routes>
@@ -26,5 +29,6 @@ export default function App() {
         />
       </Routes>
     </BrowserRouter>
+    </Provider>
   );
 }

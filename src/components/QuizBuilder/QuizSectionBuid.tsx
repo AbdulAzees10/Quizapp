@@ -99,10 +99,10 @@ export const QuizSectionBuilder: React.FC<QuizSectionBuilderProps> = ({
   }, [isAutoGenerate, autoSettings, availableQuestions]);
 
   const handleManualQuestionSelect = (selectedQuestions: Question[]) => {
+    // Update the section with the new selected questions
     onChange({
       ...section,
       questions: selectedQuestions,
-      autoGenerate: undefined,
     });
   };
 
@@ -595,13 +595,12 @@ export const QuizSectionBuilder: React.FC<QuizSectionBuilderProps> = ({
           </div>
         </div>
         <div className="border-t pt-6">
-         
-            <QuizSelector 
+          <QuizSelector
             questions={availableQuestions}
             tagSystem={tagSystem}
             selectedQuestions={section.questions}
             onSelect={handleManualQuestionSelect}
-            quizzes={quizzes} // Pass quizzes prop
+            quizzes={quizzes}
           />
          
         </div>

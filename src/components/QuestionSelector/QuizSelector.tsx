@@ -218,7 +218,7 @@ export const QuizSelector: React.FC<QuestionSelectorProps> = ({
         {/* Pagination Controls */}
         <PaginationControls
           currentPage={currentPage}
-          totalItems={filteredQuestions.length}
+          totalItems={selectedQuestions.length}
           itemsPerPage={questionsPerPage}
           onPageChange={setCurrentPage}
           onItemsPerPageChange={(value) => {

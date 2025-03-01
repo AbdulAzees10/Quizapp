@@ -204,6 +204,30 @@ export const QuestionSelector: React.FC<QuestionSelectorProps> = ({
         />
       </div>
 
+      {/* Add this new section for selected questions count */}
+      <div className="flex justify-between items-center bg-blue-50 p-3 rounded-md">
+        <div className="text-blue-700 font-medium">
+          Selected Questions: {selectedQuestionsToSave.length}
+          {section?.TotalQuestion && (
+            <span className="ml-2 text-gray-600">
+              / {section.TotalQuestion} required
+            </span>
+          )}
+        </div>
+        {section?.TotalQuestion && (
+          <div className={`text-sm ${
+            selectedQuestionsToSave.length === section.TotalQuestion 
+              ? 'text-green-600' 
+              : 'text-orange-600'
+          }`}>
+            {selectedQuestionsToSave.length === section.TotalQuestion 
+              ? '✓ Correct number of questions selected'
+              : `${section.TotalQuestion - selectedQuestionsToSave.length} more questions needed`
+            }
+          </div>
+        )}
+      </div>
+
       {/* Selected Count */}
       <div className="text-sm text-gray-600">
         Selected {selectedQuestionsToSave.length} questions
@@ -250,6 +274,8 @@ export const QuestionSelector: React.FC<QuestionSelectorProps> = ({
         </button>
       </div>
     </div>
+
+    <div></div>
 
 {/* 
         onSelect(selectedQuestionsToSave);

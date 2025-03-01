@@ -400,7 +400,9 @@ export const QuizGeneratorWizard: React.FC<QuizGeneratorWizardProps> = ({
       // Add total questions validation
     if (totalQ > 0) {
       const sectionTotal = getTotalQuestions(section.chapterDistribution);
-      if (sectionTotal !== totalQ) {
+      if(totalQ === 0) {
+        errors.push(`Section ${index + 1}: Please set total required questions`); 
+      } else if (sectionTotal !== totalQ) {
         errors.push(
           `Section ${index + 1}: Total questions (${sectionTotal}) must match required amount (${totalQ})`
         );

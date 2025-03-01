@@ -1,6 +1,22 @@
-import { Document, Page, Text, View, StyleSheet, Image, Svg } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet, Image, Font } from '@react-pdf/renderer';
 import { Quiz } from '../../types';
-import katex from 'katex';
+import katex from 'magicbook-katex';
+import 'katex/dist/katex.min.css';
+
+Font.register({
+  family: 'KaTeX_Main',
+  src: 'node_modules/katex/dist/fonts/KaTeX_Main-Regular.ttf',
+});
+
+Font.register({
+  family: 'KaTeX_Math',
+  src: 'node_modules/katex/dist/fonts/KaTeX_Math-Italic.ttf',
+});
+
+Font.register({
+  family: 'KaTeX_Size1',
+  src: 'node_modules/katex/dist/fonts/KaTeX_Size1-Regular.ttf',
+});
 
 interface QuizPDFProps {
   quiz: Quiz;
@@ -16,57 +32,113 @@ interface QuizPDFProps {
   };
 }
 
-const renderMathEquation = (text: string) => {
+const processEquation = (math: string): string => {
+  return math
+    // Math Operators and Symbols
+    .replace(/\\cdot/g, '·')
+    .replace(/\\times/g, '×')
+    .replace(/\\div/g, '÷')
+    .replace(/\\pm/g, '±')
+    .replace(/\\infty/g, '∞')
+    .replace(/\\Delta/g, 'Δ')
+    .replace(/\\sqrt/g, '√')
+    .replace(/\\sum/g, '∑')
+    .replace(/\\int/g, '∫')
+    .replace(/\\pi/g, 'π')
+    .replace(/\\theta/g, 'θ')
+    .replace(/\\alpha/g, 'α')
+    .replace(/\\beta/g, 'β')
+    .replace(/\\gamma/g, 'γ')
+    .replace(/\\lambda/g, 'λ')
+    .replace(/\\mu/g, 'μ')
+    .replace(/\\Delta/g, 'Δ')
+    .replace(/\\nabla/g, '∇')
+    .replace(/\\partial/g, '∂')
+
+    // Chemistry Specific
+    .replace(/\\ce{([^}]+)}/g, (_, formula) => {
+      return formula
+        .replace(/->|→/g, '→')
+        .replace(/<-|←/g, '←')
+        .replace(/<=>/g, '⇌')
+        .replace(/\(/g, '₍')
+        .replace(/\)/g, '₎')
+        .replace(/([A-Z][a-z]?)(\d+)/g, '$1₍$2₎')
+        .replace(/\^(\d+)/g, (_, num) => num.split('').map(d => '⁰¹²³⁴⁵⁶⁷⁸⁹'[parseInt(d)]).join(''))
+        .replace(/\^{([^}]+)}/g, (_, num) => num.split('').map(d => '⁰¹²³⁴⁵⁶⁷⁸⁹'[parseInt(d)]).join(''))
+        .replace(/\_(\d)/g, (_, d) => '₀₁₂₃₄₅₆₇₈₉'[parseInt(d)])
+        .replace(/\_{([^}]+)}/g, (_, nums) => nums.split('').map(d => '₀₁₂₃₄₅₆₇₈₉'[parseInt(d)]).join(''));
+    })
+
+    // Physics Units
+    .replace(/([A-Za-z]+)\^{(-?\d+)}/g, (_, unit, power) => {
+      const superscript = power.split('').map(d => 
+        d === '-' ? '⁻' : '⁰¹²³⁴⁵⁶⁷⁸⁹'[parseInt(d)]
+      ).join('');
+      return `${unit}${superscript}`;
+    })
+    
+    // Biology Specific
+    .replace(/\\rightarrow/g, '→')
+    .replace(/\\leftarrow/g, '←')
+    .replace(/\\leftrightarrow/g, '↔')
+    
+    // Fractions
+    .replace(/\\frac{([^}]+)}{([^}]+)}/g, (_, num, den) => `${num}⁄${den}`)
+    
+    // Subscripts and Superscripts
+    .replace(/\_(\d)/g, (_, digit) => '₀₁₂₃₄₅₆₇₈₉'[parseInt(digit)])
+    .replace(/\^(\d)/g, (_, digit) => '⁰¹²³⁴⁵⁶⁷⁸⁹'[parseInt(digit)])
+    .replace(/\_{([^}]+)}/g, (_, nums) => 
+      nums.split('').map(d => '₀₁₂₃₄₅₆⁷⁸⁹'[parseInt(d)] || d).join('')
+    )
+    .replace(/\^{([^}]+)}/g, (_, nums) => 
+      nums.split('').map(d => '⁰¹²³⁴⁵⁶⁷⁸⁹'[parseInt(d)] || d).join('')
+    );
+};
+
+const renderMathContent = (text: string) => {
   if (!text) return null;
 
   try {
-    // Function to convert KaTeX HTML to plain text with Unicode math symbols
-    const convertKaTeXToUnicode = (katexHtml: string) => {
-      return katexHtml
-        // Remove HTML tags
-        .replace(/<[^>]*>/g, '')
-        // Convert HTML entities
-        .replace(/&nbsp;/g, ' ')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        // Other common math symbols
-        .replace(/\\infty/g, '∞')
-        .replace(/\\pi/g, 'π')
-        .replace(/\\theta/g, 'θ')
-        .replace(/\\alpha/g, 'α')
-        .replace(/\\beta/g, 'β')
-        .replace(/\\gamma/g, 'γ')
-        .replace(/\\Delta/g, 'Δ')
-        .replace(/\\sum/g, '∑')
-        .replace(/\\int/g, '∫')
-        // Fractions
-        .replace(/\\frac{([^}]+)}{([^}]+)}/g, '$1⁄$2')
-        // Superscripts
-        .replace(/\^2/g, '²')
-        .replace(/\^3/g, '³')
-        .replace(/\^4/g, '⁴')
-        // Subscripts
-        .replace(/_{(\d+)}/g, '₍$1₎')
-        .replace(/_(\d)/g, (_, digit) => '₀₁₂₃₄₅₆₇₈₉'[digit]);
-    };
-
-    const parts = text.split(/(\$.*?\$|\\\[.*?\\\]|\\\(.*?\\\))/g);
-    
-    return parts.map((part, index) => {
-      if (part.match(/^\$.*\$$/) || part.match(/^\\\[.*\\\]$/) || part.match(/^\\\(.*\\\)$/)) {
-        // Remove delimiters
-        const equation = part.replace(/^\$|\$|\\\[|\\\]|\\\(|\\\)$/g, '');
+    return text.split(/(\$\$[^\$]+\$\$|\$[^\$]+\$)/).map((part, index) => {
+      if ((part.startsWith('$$') && part.endsWith('$$')) || 
+          (part.startsWith('$') && part.endsWith('$'))) {
         try {
-          // Render with KaTeX and convert to Unicode
-          const katexHtml = katex.renderToString(equation, {
+          const math = part.startsWith('$$') ? part.slice(2, -2) : part.slice(1, -1);
+          const displayMode = part.startsWith('$$');
+
+          // Use magicbook-katex to render the equation
+          const renderedMath = katex.renderToString(math, {
+            displayMode: displayMode,
+            output: 'mathml',
             throwOnError: false,
-            output: 'html'
+            trust: true,
+            strict: false,
+            macros: {
+              '\\ph': '\\phantom',
+              '\\vec': '\\mathbf',
+              '\\mat': '\\mathbf',
+              '\\ud': '\\,\\mathrm{d}',
+              '\\celsius': '\\mathrel{^\\circ\\!\\mathrm{C}}',
+              '\\degree': '\\mathrel{^\\circ}'
+            }
           });
-          const unicodeMath = convertKaTeXToUnicode(katexHtml);
-          return <Text key={index} style={styles.mathEquation}>{unicodeMath}</Text>;
+
+          return (
+            <Text 
+              key={index} 
+              style={[
+                styles.mathEquation,
+                displayMode && styles.displayMathEquation
+              ]}
+            >
+              {renderedMath}
+            </Text>
+          );
         } catch (error) {
-          console.warn('KaTeX rendering error:', error);
-          return <Text key={index} style={styles.mathEquation}>{equation}</Text>;
+          console.warn('Math rendering error:', error);
+          return <Text key={index} style={styles.mathError}>{part}</Text>;
         }
       }
       return <Text key={index}>{part}</Text>;
@@ -159,8 +231,21 @@ const styles = StyleSheet.create({
     paddingRight: '40pt',
   },
   mathEquation: {
-    fontFamily: 'Times-Roman',
+    fontFamily: 'KaTeX_Main',
+    lineHeight: 1.5,
+    fontSize: 10,
+  },
+  displayMathEquation: {
+    marginVertical: 8,
+    textAlign: 'center',
+    fontSize: 12,
+    paddingLeft: 20,
+    paddingRight: 20,
+  },
+  mathError: {
+    color: 'red',
     fontStyle: 'italic',
+    fontSize: 10,
   },
   answerKey: {
     marginTop: '10mm',
@@ -185,6 +270,19 @@ const styles = StyleSheet.create({
     color: 'red',
     opacity: 0.1,
     zIndex: -1,
+  },
+  // Add specific styles for different equation types
+  fraction: {
+    display: 'inline-block',
+    verticalAlign: 'middle',
+  },
+  superscript: {
+    fontSize: '70%',
+    verticalAlign: 'super',
+  },
+  subscript: {
+    fontSize: '70%',
+    verticalAlign: 'sub',
   },
 });
 
@@ -252,7 +350,7 @@ export function QuizPDF({ quiz, instituteDetails, testDetails }: QuizPDFProps) {
             <View key={letter} style={styles.option}>
               <Text style={styles.optionLabel}>{letter})</Text>
               <View style={styles.optionContent}>
-                {renderMathEquation(optionText)}
+                {renderMathContent(optionText)}
               </View>
             </View>
           );
@@ -345,7 +443,7 @@ export function QuizPDF({ quiz, instituteDetails, testDetails }: QuizPDFProps) {
                         <View style={styles.question}>
                           <Text style={styles.questionNumber}>{questionNumber}.</Text>
                           <View style={styles.questionContent}>
-                            {renderMathEquation(question.question_text)}
+                            {renderMathContent(question.question_text)}
                             {question.image_url && (
                               <Image
                                 src={question.image_url}
@@ -370,7 +468,7 @@ export function QuizPDF({ quiz, instituteDetails, testDetails }: QuizPDFProps) {
                         <View style={styles.question}>
                           <Text style={styles.questionNumber}>{questionNumber}.</Text>
                           <View style={styles.questionContent}>
-                            {renderMathEquation(question.question_text)}
+                            {renderMathContent(question.question_text)}
                             {question.image_url && (
                               <Image
                                 src={question.image_url}
@@ -456,4 +554,4 @@ export function QuizPDF({ quiz, instituteDetails, testDetails }: QuizPDFProps) {
       </Page>
     </Document>
   );
-} 
+}

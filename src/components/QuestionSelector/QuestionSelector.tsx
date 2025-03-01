@@ -116,12 +116,19 @@ export const QuestionSelector: React.FC<QuestionSelectorProps> = ({
   };
 
   const handleSaveSection = () => {
-    if(section?.TotalQuestion && selectedQuestionsToSave.length !== section.TotalQuestion){
-      setError(`Please select exactly ${section.TotalQuestion} questions. Currently selected: ${selectedQuestionsToSave.length}`);
+
+    if(section?.TotalQuestion === undefined || section?.TotalQuestion === 0) {
+      setError("Please enter the total number of questions for this section.");
       return false;
     }
-    setError("");
-    return true;
+   else if(section?.TotalQuestion && selectedQuestionsToSave.length !== section.TotalQuestion ) {
+      setError(`Please select exactly ${section.TotalQuestion} questions. Currently selected: ${selectedQuestionsToSave.length}`);
+      return false;
+    }else{
+      setError("");
+      return true;
+    }
+   
     
   };
 
